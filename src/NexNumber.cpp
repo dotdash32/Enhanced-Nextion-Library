@@ -24,7 +24,7 @@ NexNumber::NexNumber(Nextion *nextion, uint8_t pid, uint8_t cid, const char *nam
 {
 }
 
-bool NexNumber::getValue(uint32_t *number)
+bool NexNumber::getValue(int32_t *number)
 {
     String cmd = String("get ");
     getObjGlobalPageName(cmd);
@@ -33,7 +33,7 @@ bool NexNumber::getValue(uint32_t *number)
     return recvRetNumber(number);
 }
 
-bool NexNumber::setValue(uint32_t number)
+bool NexNumber::setValue(int32_t number)
 {
     char buf[10] = {0};
     String cmd;

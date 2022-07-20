@@ -49,7 +49,7 @@ public: /* methods */
      * @param number - buffer storing text returned. 
      * @return The real length of text returned. 
      */
-    bool getValue(uint32_t *number);
+    bool getValue(int32_t *number);
     
     /**
      * Set number attribute of component.
@@ -57,7 +57,7 @@ public: /* methods */
      * @param number - number buffer. 
      * @return true if success, false for failure. 
      */
-    bool setValue(uint32_t number);
+    bool setValue(int32_t number);
 	
     /**
      * Get bco attribute of component
