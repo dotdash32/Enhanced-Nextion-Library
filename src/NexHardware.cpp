@@ -15,6 +15,11 @@
  * the License, or (at your option) any later version.
  * 
  * @copyright 2020 Jyrki Berg
+ * 
+ * @author Josh DeWitt 7/28/2022 (https://github.com/dotdash32)
+ * @change remove secondary .read() call from sendCmd to avoid 
+ * dropping events
+ * 
  **/
 
 
@@ -427,10 +432,13 @@ void Nextion::sendCommand(const char* cmd)
 {
     ReadQueuedEvents();
     // empty in buffer for clean responce
+    /** below code causes lost events!!!
+     * ReadQueuedEvents() should handle it well enough?
     while (m_nexSerial->available())
     {
         m_nexSerial->read();
     }
+    */
     
     m_nexSerial->print(cmd);
     m_nexSerial->write(0xFF);
