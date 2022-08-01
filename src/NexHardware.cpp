@@ -78,43 +78,224 @@ static uint8_t _nextion_queued_events[][2] =
     {0xFF,                              0}  // end of list
 };
 
-void Nextion::ReadQueuedEvents()
+/**
+ * 
+ * @brief Take in serial data and store it into buffer for processing
+ * 
+ * @return whether or not there is data to parse afterward
+ */
+bool Nextion::readSerialData()
 {
-    for(int c=m_nexSerial->peek(); c!=-1; c=m_nexSerial->peek())
+    bool returnVal = false; // assume no data to parse
+    while(m_nexSerial->available())
     {
-        int i{0};
-        for(; _nextion_queued_events[i][1]; ++i)
+        //while there is data available, put it into a read buffer
+        byte newData = m_nexSerial->read(); 
+        RX_buffer[++RX_ind] = newData;
+        if (NEX_END_TRANSMISSION_VALUE == newData)
         {
-            if(c==_nextion_queued_events[i][0])
+            endTransCnt++;
+            if(endTransCnt == NEX_END_TRANSMISSION_LENGTH)
             {
-                nexQueuedEvent *event = new nexQueuedEvent();
-                if(readBytes(&event->event_data[0],_nextion_queued_events[i][1],20)!= _nextion_queued_events[i][1])
+                // we have the full transmission ender
+                returnVal = true; // get ready to parse afterward
+                endTransCnt = 0; // reset message
+                RX_ind = 0; // reset location in message
+            }
+        }
+    }
+    return returnVal;
+}
+
+/**
+ * @brief Process the recieved message and handle any new events
+ * 
+ */
+void parseReceivedMessage(NexTouch *nex_listen_list[])
+{
+    switch(RX_buffer[0])
+    {
+        case NEX_RET_EVENT_NEXTION_STARTUP: // for turn on, initial startup
+        {
+            if (0x00 == RX_buffer[1] && 0x00 == RX_buffer[2] &&
+                0xFF == RX_buffer[3] && 0xFF == RX_buffer[4] && 0xFF == RX_buffer[5])
+            {
+                if(nextionStartupCallback!=nullptr)
                 {
-                    delete event;
-                    return;
+                    nextionStartupCallback();
                 }
-                if(!m_queuedEvents)
+            }
+            else if (0xFF == RX_buffer[1] && 0xFF == RX_buffer[2] && 0xFF == RX_buffer[3])
+            {
+                // invalid instruction return
+                if(!isEmpty_nexQueueCommands())
                 {
-                    m_queuedEvents = event;
+                    nexQueuedCommand event = dequeue_nexQueueCommands();
+                    if (event.failCB!=nullptr)
+                    {
+                        event.failCB();
+                    }
+                }
+            }
+            break;
+        }
+        case NEX_RET_CMD_FINISHED_OK:
+        {
+            nexQueuedCommand event = dequeue_nexQueueCommands();
+            if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
+            {
+                // got wrong code back, call failure callback
+                event.failCB();
+                // otherwise, it succeeded and we do nothing
+            }
+            break;
+        }
+        case NEX_RET_SERIAL_BUFFER_OVERFLOW: // buffer overflow event
+        {
+            if (0xFF == RX_buffer[1] && 0xFF == RX_buffer[2] && 0xFF == RX_buffer[3])
+            {
+                if(nextionBufferOverflowCallback!=nullptr)
+                {
+                    nextioNBufferOverflowCallback(); // new, but should have an option
+                }
+            }
+        }
+        case NEX_RET_EVENT_TOUCH_HEAD: // i.e. a button press
+        {
+            if (0xFF == RX_buffer[4] && 0xFF == RX_buffer[5] && 0xFF == RX_buffer[6])
+            {
+                NexTouch::iterate(nex_listen_list, RX_buffer[1], RX_buffer[2], RX_buffer[3]);
+            }
+            break;
+        }
+        case NEX_RET_CURRENT_PAGE_ID_HEAD:
+        {
+            if (0xFF == RX_buffer[2] && 0xFF == RX_buffer[3] && 0xFF == RX_buffer[4])
+            {
+                if(currentPageIdCallback!=nullptr)
+                {
+                    currentPageIdCallback(RX_buffer[1]);
+                }
+            }
+            break;
+        }
+        case NEX_RET_STRING_HEAD: // got a string response!
+        {
+            if(!isEmpty_nexQueueCommands())
+            {
+                nexQueuedCommand event = dequeue_nexQueueCommands();
+                if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
+                {
+                    // got wrong code back, call failure callback
+                    event.failCB();
                 }
                 else
                 {
-                    nexQueuedEvent *last = m_queuedEvents->m_next;
-                    while( last->m_next)
+                    // we have correct return code, now return the string
+                    if (event.getterCallback.strCB != nullptr)
                     {
-                        last = last->m_next;
+                        // there exists a string callback to send to
+                        event.getterCallback.strCB(RX_buffer[1], RX_ind - 3);
+                            // adjust buffer start and length to account for pre/post fixes
                     }
-                    last->m_next=event;
                 }
-                yield();
             }
+            break;
         }
-        if(!_nextion_queued_events[i][1])
+        case NEX_RET_NUMBER_HEAD: // got a number response
         {
-            return;
+            if(!isEmpty_nexQueueCommands())
+            {
+                nexQueuedCommand event = dequeue_nexQueueCommands();
+                if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
+                {
+                    // got wrong code back, call failure callback
+                    event.failCB();
+                    // otherwise, it succeeded and we do nothing
+                }
+                else
+                {
+                    // correct return code, now return the number through callback
+                    if (event.getterCallback.numCB != nullptr)
+                    {
+                        int32_t number = ((uint32_t)RX_buffer[4] << 24) | ((uint32_t)RX_buffer[3] << 16) | 
+                                        ((uint32_t)RX_buffer[2] << 8) | (RX_buffer[1]);
+                        event.getterCallback->numCB(number);
+                    }
+                }
+            }
+            break;
         }
-    }
-    return;
+        case NEX_RET_EVENT_POSITION_HEAD:
+        case NEX_RET_EVENT_SLEEP_POSITION_HEAD:
+        {
+            if (0xFF == RX_buffer[6] && 0xFF == RX_buffer[7] && 0xFF == RX_buffer[8])
+            {
+                if(RX_buffer[0] == NEX_RET_EVENT_POSITION_HEAD && touchCoordinateCallback!=nullptr)
+                {
+                        
+                    touchCoordinateCallback(((int16_t)__buffer[2] << 8) | (__buffer[1]), ((int16_t)__buffer[4] << 8) | (__buffer[3]),__buffer[5]);
+                }
+                else if(RX_buffer[0] == NEX_RET_EVENT_SLEEP_POSITION_HEAD && touchCoordinateCallback!=nullptr)
+                {
+                        
+                    touchEventInSleepModeCallback(((int16_t)__buffer[2] << 8) | (__buffer[1]), ((int16_t)__buffer[4] << 8) | (__buffer[3]),__buffer[5]);
+                }
+            }
+            break;
+        }
+        case NEX_RET_AUTOMATIC_SLEEP:
+        case NEX_RET_AUTOMATIC_WAKE_UP:
+        {
+            if (0xFF == RX_buffer[1] && 0xFF == RX_buffer[2] && 0xFF == RX_buffer[3])
+            {
+                if(RX_buffer[0]==NEX_RET_AUTOMATIC_SLEEP && automaticSleepCallback!=nullptr)
+                {
+                    automaticSleepCallback();
+                }
+                else if(RX_buffer[0]==NEX_RET_AUTOMATIC_WAKE_UP && automaticWakeUpCallback!=nullptr)
+                {
+                    automaticWakeUpCallback();
+                }
+            }
+            break;
+        }
+        case NEX_RET_EVENT_NEXTION_READY:
+        {
+            if(nextionReadyCallback!=nullptr)
+            {
+                nextionReadyCallback();
+            }
+            break;
+        }
+        case NEX_RET_START_SD_UPGRADE:
+        {
+            if(startSdUpgradeCallback!=nullptr)
+            {
+                startSdUpgradeCallback();
+            }
+            break;
+        }
+
+
+        default: // if we are here, it's probably a bad event
+        {
+            dbSerialPrint("Bad serial command, header: ");
+            dbSerialPrint(RX_buffer[0]);
+            dbSerialPrintln();
+
+            // assorted invalid instruction return
+            if(!isEmpty_nexQueueCommands())
+            {
+                nexQueuedCommand event = dequeue_nexQueueCommands();
+                if (event.failCB!=nullptr)
+                {
+                    event.failCB();
+                }
+            }
+            break;              
+        }
+    }; 
 }
 
 /** handle internal command queue **/
@@ -142,6 +323,7 @@ bool Nextion::isEmpty_nexQueueCommands(void)
 #ifdef NEX_ENABLE_HW_SERIAL
 Nextion::Nextion(HardwareSerial &nexSerial):m_nexSerialType{HW},m_nexSerial{&nexSerial},
     nextionStartupCallback{nullptr},
+    nextioNBufferOverflowCallback{nullptr},
     currentPageIdCallback{nullptr},
     touchCoordinateCallback{nullptr},
     touchEventInSleepModeCallback{nullptr},
@@ -160,6 +342,7 @@ Nextion* Nextion::GetInstance(HardwareSerial &nexSerial)
 #ifdef NEX_ENABLE_SW_SERIAL
 Nextion::Nextion(SoftwareSerial &nexSerial):m_nexSerialType{SW},m_nexSerial{&nexSerial},
     nextionStartupCallback{nullptr},
+    nextioNBufferOverflowCallback{nullptr},
     currentPageIdCallback{nullptr},
     touchCoordinateCallback{nullptr},
     touchEventInSleepModeCallback{nullptr},
@@ -172,6 +355,7 @@ Nextion::Nextion(SoftwareSerial &nexSerial):m_nexSerialType{SW},m_nexSerial{&nex
 #ifdef USBCON
 Nextion::Nextion(Serial_ &nexSerial):m_nexSerialType{HW_USBCON},m_nexSerial{&nexSerial},
     nextionStartupCallback{nullptr},
+    nextioNBufferOverflowCallback{nullptr},
     currentPageIdCallback{nullptr},
     touchCoordinateCallback{nullptr},
     touchEventInSleepModeCallback{nullptr},
@@ -638,120 +822,10 @@ uint32_t Nextion::GetCurrentBaud()
     return m_baud;
 }
 
-void Nextion::nexLoop(NexTouch *nex_listen_list[])
+void Nextion::nexLoop()
 {
-    ReadQueuedEvents();
-    for(nexQueuedEvent* queued = GetQueuedEvent(); queued; queued = GetQueuedEvent())
+    if(readSerialData()) // read the data in
     {
-        uint8_t *__buffer{queued->event_data};
-
-        switch(__buffer[0])
-        {
-            case NEX_RET_EVENT_NEXTION_STARTUP:
-            {
-                if (0x00 == __buffer[1] && 0x00 == __buffer[2] && 0xFF == __buffer[3] && 0xFF == __buffer[4] && 0xFF == __buffer[5])
-                {
-                    if(nextionStartupCallback!=nullptr)
-                    {
-                        nextionStartupCallback();
-                    }
-                }
-                break;
-            }
-            case NEX_RET_EVENT_TOUCH_HEAD:
-            {
-                if (0xFF == __buffer[4] && 0xFF == __buffer[5] && 0xFF == __buffer[6])
-                {
-                    NexTouch::iterate(nex_listen_list, __buffer[1], __buffer[2], __buffer[3]);
-                }
-                break;
-            }
-            case NEX_RET_CURRENT_PAGE_ID_HEAD:
-            {
-                if (0xFF == __buffer[2] && 0xFF == __buffer[3] && 0xFF == __buffer[4])
-                {
-                    if(currentPageIdCallback!=nullptr)
-                    {
-                        currentPageIdCallback(__buffer[1]);
-                    }
-                }
-                break;
-            }
-            case NEX_RET_EVENT_POSITION_HEAD:
-            case NEX_RET_EVENT_SLEEP_POSITION_HEAD:
-            {
-                if (0xFF == __buffer[6] && 0xFF == __buffer[7] && 0xFF == __buffer[8])
-                {
-                    if(__buffer[0] == NEX_RET_EVENT_POSITION_HEAD && touchCoordinateCallback!=nullptr)
-                    {
-                            
-                        touchCoordinateCallback(((int16_t)__buffer[2] << 8) | (__buffer[1]), ((int16_t)__buffer[4] << 8) | (__buffer[3]),__buffer[5]);
-                    }
-                    else if(__buffer[0] == NEX_RET_EVENT_SLEEP_POSITION_HEAD && touchCoordinateCallback!=nullptr)
-                    {
-                            
-                        touchEventInSleepModeCallback(((int16_t)__buffer[2] << 8) | (__buffer[1]), ((int16_t)__buffer[4] << 8) | (__buffer[3]),__buffer[5]);
-                    }
-                }
-                break;
-            }
-            case NEX_RET_AUTOMATIC_SLEEP:
-            case NEX_RET_AUTOMATIC_WAKE_UP:
-            {
-                if (0xFF == __buffer[1] && 0xFF == __buffer[2] && 0xFF == __buffer[3])
-                {
-                    if(__buffer[0]==NEX_RET_AUTOMATIC_SLEEP && automaticSleepCallback!=nullptr)
-                    {
-                        automaticSleepCallback();
-                    }
-                    else if(__buffer[0]==NEX_RET_AUTOMATIC_WAKE_UP && automaticWakeUpCallback!=nullptr)
-                    {
-                        automaticWakeUpCallback();
-                    }
-                }
-                break;
-            }
-            case NEX_RET_EVENT_NEXTION_READY:
-            {
-                if(nextionReadyCallback!=nullptr)
-                {
-                    nextionReadyCallback();
-                }
-                break;
-            }
-            case NEX_RET_START_SD_UPGRADE:
-            {
-                if(startSdUpgradeCallback!=nullptr)
-                {
-                    startSdUpgradeCallback();
-                }
-                break;
-            }
-            default:
-            {
-                break;              
-            }
-        }; 
-        delete queued;
-        ReadQueuedEvents();    
+        parseReceivedMessage(m_nex_listen_list); // if we got stuff, decode
     }
-
-    if(m_nexSerial->available())
-    {
-        ReadQueuedEvents();
-        if(!m_queuedEvents)
-        {
-            // unnoun data clean buffer.
-            uint8_t c = m_nexSerial->read();
-            dbSerialPrint("Unexpected data received hex: ");
-            while (m_nexSerial->available())
-            {
-                dbSerialPrint(c);
-                dbSerialPrint(',');
-                c=m_nexSerial->read();
-                yield();
-            }
-            dbSerialPrintln(c);
-        }
-    } 
 }

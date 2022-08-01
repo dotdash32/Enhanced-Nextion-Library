@@ -198,6 +198,11 @@ virtual ~Nextion();
  void (*nextionStartupCallback)();
 // std::function<void()> nextionStartupCallback;
 
+/**
+ * Nextion Buffer Overflow callback function
+ * Returned when Nextion looses commands when buffer is full
+ */
+void (*nextioNBufferOverflowCallback)();
 
 /**
  * Current Page ID callback function
