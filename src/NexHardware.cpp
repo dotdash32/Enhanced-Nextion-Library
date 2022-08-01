@@ -117,17 +117,25 @@ void Nextion::ReadQueuedEvents()
     return;
 }
 
-nexQueuedEvent* Nextion::GetQueuedEvent()
+/** handle internal command queue **/
+bool Nextion::enqueue_nexQueueCommands(nexQueuedCommand event)
 {
-    nexQueuedEvent *tmp{m_queuedEvents};
-    if(tmp)
-    {
-        m_queuedEvents = m_queuedEvents->m_next;
-        tmp->m_next=0;
-    }
-    return tmp;
+    eventQ[Qback] = event;
+    Qback = (Qback+1) % CMD_QUEUE_SIZE;
+    return (Qback != Qfront); // if head/tail at same spot, we overflowed
 }
 
+nexQueuedCommand Nextion::dequeue_nexQueueCommands(void)
+{
+    nexQueuedCommand temp = eventQ[Qfront]; // pull from front
+    Qfront = (Qfront+1) % CMD_QUEUE_SIZE;
+    return temp;
+}
+
+bool Nextion::isEmpty_nexQueueCommands(void)
+{
+    return (Qfront == Qback); // at same spot, nothing to remove
+}
 
 
 

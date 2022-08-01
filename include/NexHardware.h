@@ -43,6 +43,23 @@ struct nexQueuedEvent
     nexQueuedEvent *m_next{nullptr};
 };
 
+typedef (void *failureCallback) (uint8_t returnCode);
+typedef (void *numberCallback) (int32_t returnNum);
+typedef (void *stringCallback) (char *buf, uint8_t len);
+#define CMD_QUEUE_SIZE              8 // how many events can we store?
+struct nexQueuedCommand
+{
+    uint8_t successReturnCode; // what the ideal message should be
+    union getterCallback // if it needs a return value, store the value here
+    {
+        numberCallback numCB;
+        stringCallback strCB;
+    };
+    failureCallback failCB; // if we get the wrong message header
+    size_t timeout; // how long until we assume its dead?
+    
+};
+
 /**
  * @addtogroup CoreAPI 
  * @{ 
