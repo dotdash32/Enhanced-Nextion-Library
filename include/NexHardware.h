@@ -51,7 +51,7 @@ typedef void (*stringCallback) (char *buf, uint8_t len);
 struct nexQueuedCommand
 {
     uint8_t successReturnCode; // what the ideal message should be
-    union getterCallback // if it needs a return value, store the value here
+    union // if it needs a return value, store the value here
     {
         numberCallback numCB;
         stringCallback strCB;
@@ -105,7 +105,7 @@ enum serialType {HW, SW, HW_USBCON};
     const serialType m_nexSerialType; 
     Stream *m_nexSerial;
     uint32_t m_baud;
-    NexTouch *m_nex_listen_list[];
+    NexTouch **m_nex_listen_list;
 
     nexQueuedEvent *m_queuedEvents{nullptr};
 
@@ -155,6 +155,9 @@ nexQueuedCommand dequeue_nexQueueCommands(void);
  * @return false - no events, don't dequeue an empty queue!
  */
 bool isEmpty_nexQueueCommands(void);
+
+nexQueuedCommand eventQ[CMD_QUEUE_SIZE];
+uint8_t Qback, Qfront = {0};
 
 
 
@@ -445,7 +448,7 @@ bool RecvTransparendDataModeFinished(size_t timeout = NEX_TIMEOUT_COMMAND) final
  * 
  * @return true if success, false for failure. 
  */
-bool nexInit(const uint32_t baud = NEX_SERIAL_DEFAULT_BAUD);
+bool nexInit(const uint32_t baud = NEX_SERIAL_DEFAULT_BAUD, NexTouch *nex_listen_list[] = nullptr);
 
 /**
  * current baud value
@@ -466,7 +469,7 @@ uint32_t GetCurrentBaud() final;
  * @warning This function must be called repeatedly to response touch events
  *  from Nextion touch panel. Actually, you should place it in your loop function. 
  */
-void nexLoop(NexTouch *nex_listen_list[]);
+void nexLoop();
 };
 
 /**

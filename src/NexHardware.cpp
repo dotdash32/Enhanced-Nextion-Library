@@ -122,7 +122,7 @@ bool Nextion::readSerialData(void)
  * @brief Process the recieved message and handle any new events
  * 
  */
-void parseReceivedMessage(NexTouch *nex_listen_list[])
+void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
 {
     switch(RX_buffer[0])
     {
@@ -144,7 +144,7 @@ void parseReceivedMessage(NexTouch *nex_listen_list[])
                     nexQueuedCommand event = dequeue_nexQueueCommands();
                     if (event.failCB!=nullptr)
                     {
-                        event.failCB();
+                        event.failCB(RX_buffer[0]);
                     }
                 }
             }
@@ -156,20 +156,21 @@ void parseReceivedMessage(NexTouch *nex_listen_list[])
             if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
             {
                 // got wrong code back, call failure callback
-                event.failCB();
+                event.failCB(RX_buffer[0]);
                 // otherwise, it succeeded and we do nothing
             }
             break;
         }
         case NEX_RET_SERIAL_BUFFER_OVERFLOW: // buffer overflow event
         {
-            if (0xFF == RX_buffer[1] && 0xFF == RX_buffer[2] && 0xFF == RX_buffer[3])
-            {
-                if(nextionBufferOverflowCallback!=nullptr)
-                {
-                    nextioNBufferOverflowCallback(); // new, but should have an option
-                }
-            }
+            // if (0xFF == RX_buffer[1] && 0xFF == RX_buffer[2] && 0xFF == RX_buffer[3])
+            // {
+            //     if(nextionBufferOverflowCallback!=nullptr)
+            //     {
+            //         nextioNBufferOverflowCallback(); // new, but should have an option
+            //     }
+            // }
+            break;
         }
         case NEX_RET_EVENT_TOUCH_HEAD: // i.e. a button press
         {
@@ -198,15 +199,15 @@ void parseReceivedMessage(NexTouch *nex_listen_list[])
                 if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
                 {
                     // got wrong code back, call failure callback
-                    event.failCB();
+                    event.failCB(RX_buffer[0]);
                 }
                 else
                 {
                     // we have correct return code, now return the string
-                    if (event.getterCallback.strCB != nullptr)
+                    if (event.strCB != nullptr)
                     {
                         // there exists a string callback to send to
-                        event.getterCallback.strCB(RX_buffer[1], RX_ind - 3);
+                        event.strCB( reinterpret_cast<char*>(&RX_buffer[1]), RX_ind - 3);
                             // adjust buffer start and length to account for pre/post fixes
                     }
                 }
@@ -221,17 +222,17 @@ void parseReceivedMessage(NexTouch *nex_listen_list[])
                 if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
                 {
                     // got wrong code back, call failure callback
-                    event.failCB();
+                    event.failCB(RX_buffer[0]);
                     // otherwise, it succeeded and we do nothing
                 }
                 else
                 {
                     // correct return code, now return the number through callback
-                    if (event.getterCallback.numCB != nullptr)
+                    if (event.numCB != nullptr)
                     {
                         int32_t number = ((uint32_t)RX_buffer[4] << 24) | ((uint32_t)RX_buffer[3] << 16) | 
                                         ((uint32_t)RX_buffer[2] << 8) | (RX_buffer[1]);
-                        event.getterCallback->numCB(number);
+                        event.numCB(number);
                     }
                 }
             }
@@ -245,12 +246,12 @@ void parseReceivedMessage(NexTouch *nex_listen_list[])
                 if(RX_buffer[0] == NEX_RET_EVENT_POSITION_HEAD && touchCoordinateCallback!=nullptr)
                 {
                         
-                    touchCoordinateCallback(((int16_t)__buffer[2] << 8) | (__buffer[1]), ((int16_t)__buffer[4] << 8) | (__buffer[3]),__buffer[5]);
+                    touchCoordinateCallback(((int16_t)RX_buffer[2] << 8) | (RX_buffer[1]), ((int16_t)RX_buffer[4] << 8) | (RX_buffer[3]),RX_buffer[5]);
                 }
                 else if(RX_buffer[0] == NEX_RET_EVENT_SLEEP_POSITION_HEAD && touchCoordinateCallback!=nullptr)
                 {
                         
-                    touchEventInSleepModeCallback(((int16_t)__buffer[2] << 8) | (__buffer[1]), ((int16_t)__buffer[4] << 8) | (__buffer[3]),__buffer[5]);
+                    touchEventInSleepModeCallback(((int16_t)RX_buffer[2] << 8) | (RX_buffer[1]), ((int16_t)RX_buffer[4] << 8) | (RX_buffer[3]),RX_buffer[5]);
                 }
             }
             break;
@@ -301,7 +302,7 @@ void parseReceivedMessage(NexTouch *nex_listen_list[])
                 nexQueuedCommand event = dequeue_nexQueueCommands();
                 if (event.failCB!=nullptr)
                 {
-                    event.failCB();
+                    event.failCB(RX_buffer[0]);
                 }
             }
             break;              
@@ -442,37 +443,37 @@ bool Nextion::prepRetNumber(uint8_t returnCode, numberCallback retCallback,
                             failureCallback failCallback, size_t timeout)
 {
     nexQueuedCommand event;
-    nexQueuedCommand.successReturnCode = returnCode;
-    nexQueuedCommand.getterCallbaack.numCB = retCallback;
-    nexQueuedCommand.failCB = failCallback;
-    nexQueuedCommand.timeout = timeout;
+    event.successReturnCode = returnCode;
+    event.numCB = retCallback;
+    event.failCB = failCallback;
+    event.timeout = timeout;
 
     // put in queue
-    enqueue_nexQueueCommands(event);
+    return enqueue_nexQueueCommands(event);
 }
 bool Nextion::prepRetString(uint8_t returnCode, stringCallback retCallback, 
                             failureCallback failCallback, size_t timeout)
 {
     nexQueuedCommand event;
-    nexQueuedCommandsuccessReturnCode = returnCode;
-    nexQueuedCommandgetterCallbaack.strCB = retCallback;
-    nexQueuedCommandfailCB = failCallback;
-    nexQueuedCommandtimeout = timeout;
+    event.successReturnCode = returnCode;
+    event.strCB = retCallback;
+    event.failCB = failCallback;
+    event.timeout = timeout;
 
     // put in queue
-    enqueue_nexQueueCommands(event);
+    return enqueue_nexQueueCommands(event);
 }
 bool Nextion::prepRetCode(uint8_t returnCode, 
-                            failureCallback failCallback, size_t timeout)
+                          failureCallback failCallback, size_t timeout)
 {
     nexQueuedCommand event ;
-    nexQueuedCommand.successReturnCode = returnCode;
-    nexQueuedCommand.getterCallbaack.numCB = nullptr; // defaults to none
-    nexQueuedCommand.failCB = failCallback;
-    nexQueuedCommand.timeout = timeout;
+    event.successReturnCode = returnCode;
+    event.numCB = nullptr; // defaults to none
+    event.failCB = failCallback;
+    event.timeout = timeout;
 
     // put in queue
-    enqueue_nexQueueCommands(event);
+    return enqueue_nexQueueCommands(event);
 }
 
 /*
@@ -501,13 +502,13 @@ bool Nextion::recvRetNumber(uint32_t *number, size_t timeout)
     }
     else
     {
-        ret &= prepRetNumber(NEX_RET_NUMBER_HEAD, null, timeout); // start the queue
+        ret &= prepRetNumber(NEX_RET_NUMBER_HEAD, nullptr, nullptr, timeout); // start the queue
             // if it's false, we failed anyway
         while (!isEmpty_nexQueueCommands() && ((millis()-start)<timeout))
         {
             // while there are other events (ahead of us with actual callbacks)
             // just sit here and loop
-            nexLoop();
+            Nextion::nexLoop();
         }
 
         // when we break, our event should be the last one processed
@@ -523,8 +524,6 @@ bool Nextion::recvRetNumber(uint32_t *number, size_t timeout)
             ret = false;
         }
 
-        if (ret) 
-    if (ret) 
         if (ret) 
         {
             dbSerialPrint("recvRetNumber: ");
@@ -560,7 +559,7 @@ bool Nextion::recvRetNumber(int32_t *number, size_t timeout)
     }
     else
     {
-        ret &= prepRetNumber(NEX_RET_NUMBER_HEAD, null, timeout); // start the queue
+        ret &= prepRetNumber(NEX_RET_NUMBER_HEAD, nullptr, nullptr, timeout); // start the queue
             // if it's false, we failed anyway
         while (!isEmpty_nexQueueCommands() && ((millis()-start)<timeout))
         {
@@ -581,8 +580,6 @@ bool Nextion::recvRetNumber(int32_t *number, size_t timeout)
             ret = false;
         }
 
-        if (ret) 
-    if (ret) 
         if (ret) 
         {
             dbSerialPrint("recvRetNumber: ");
@@ -614,7 +611,7 @@ bool Nextion::recvRetString(String &str, size_t timeout, bool start_flag)
     uint32_t start{millis()};
     str = "";
 
-    ret &= prepRetString(NEX_RET_STRING_HEAD, null, timeout); // start the queue
+    ret &= prepRetString(NEX_RET_STRING_HEAD, nullptr, nullptr, timeout); // start the queue
         // if it's false, we failed anyway
     while (!isEmpty_nexQueueCommands() && ((millis()-start)<timeout))
     {
@@ -705,7 +702,7 @@ bool Nextion::recvCommand(const uint8_t command, size_t timeout)
     bool ret = true;
     uint32_t start{millis()};
 
-    ret &= prepRetCode(command, null, timeout); // start the queue
+    ret &= prepRetCode(command, nullptr, timeout); // start the queue
         // if it's false, we failed anyway
     while (!isEmpty_nexQueueCommands() && ((millis()-start)<timeout))
     {
@@ -781,7 +778,7 @@ bool Nextion::RecvTransparendDataModeFinished(size_t timeout)
     return ret;
 }
 
-bool Nextion::nexInit(const uint32_t baud, const NexTouch *nex_listen_list[])
+bool Nextion::nexInit(const uint32_t baud, NexTouch *nex_listen_list[])
 {
     m_baud=NEX_SERIAL_DEFAULT_BAUD;
     m_nex_listen_list = nex_listen_list; // store internally
