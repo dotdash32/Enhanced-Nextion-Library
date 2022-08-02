@@ -44,9 +44,9 @@ struct nexQueuedEvent
     nexQueuedEvent *m_next{nullptr};
 };
 
-typedef (void *failureCallback) (uint8_t returnCode);
-typedef (void *numberCallback) (int32_t returnNum);
-typedef (void *stringCallback) (char *buf, uint8_t len);
+typedef void (*failureCallback) (uint8_t returnCode);
+typedef void (*numberCallback) (int32_t returnNum);
+typedef void (*stringCallback) (char *buf, uint8_t len);
 #define CMD_QUEUE_SIZE              8 // how many events can we store?
 struct nexQueuedCommand
 {
@@ -137,7 +137,7 @@ void parseReceivedMessage(NexTouch *nex_listen_list[]);
  * @return true - success
  * @return false - circular buffer overflow!
  */
-bool Nextion::enqueue_nexQueueCommands(nexQueuedCommand event);
+bool enqueue_nexQueueCommands(nexQueuedCommand event);
 
 /**
  * @brief Get the head of the event queue
@@ -146,7 +146,7 @@ bool Nextion::enqueue_nexQueueCommands(nexQueuedCommand event);
  * @return event struct
  * 
  */
-nexQueuedCommand Nextion::dequeue_nexQueueCommands(void);
+nexQueuedCommand dequeue_nexQueueCommands(void);
 
 /**
  * @brief Are there events in the queue?
@@ -154,7 +154,7 @@ nexQueuedCommand Nextion::dequeue_nexQueueCommands(void);
  * @return true - yes, there are events
  * @return false - no events, don't dequeue an empty queue!
  */
-bool Nextion::isEmpty_nexQueueCommands(void)
+bool isEmpty_nexQueueCommands(void);
 
 
 
@@ -306,12 +306,12 @@ void (*nextioNBufferOverflowCallback)();
  void (*startSdUpgradeCallback)();
 // std::function<void()> startSdUpgradeCallback;
 
-bool Nextion::prepRetNumber(uint8_t returnCode, numberCallback retCallback, 
-                            failureCallback failCallback, size_t timeout);
-bool Nextion::prepRetString(uint8_t returnCode, stringCallback retCallback, 
-                            failureCallback failCallback, size_t timeout);
-bool Nextion::prepRetCode(uint8_t returnCode, 
-                            failureCallback failCallback, size_t timeout);                                                        
+bool prepRetNumber(uint8_t returnCode, numberCallback retCallback, 
+                   failureCallback failCallback, size_t timeout);
+bool prepRetString(uint8_t returnCode, stringCallback retCallback, 
+                   failureCallback failCallback, size_t timeout);
+bool prepRetCode(uint8_t returnCode, 
+                 failureCallback failCallback, size_t timeout);                                                        
 
 /* Receive unsigned number
 *
