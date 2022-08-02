@@ -46,8 +46,11 @@ struct nexQueuedEvent
 
 typedef void (*failureCallback) (uint8_t returnCode);
 typedef void (*numberCallback) (int32_t returnNum);
-typedef void (*stringCallback) (char *buf, uint8_t len);
+typedef void (*stringCallback) (char *buf, uint16_t len);
 #define CMD_QUEUE_SIZE              8 // how many events can we store?
+enum CommandTypes {
+    CT_command, CT_number, CT_stringHead, CT_stringHeadless
+};
 struct nexQueuedCommand
 {
     uint8_t successReturnCode; // what the ideal message should be
@@ -58,6 +61,7 @@ struct nexQueuedCommand
     };
     failureCallback failCB; // if we get the wrong message header
     size_t timeout; // how long until we assume its dead?
+    CommandTypes cmdType; // what kind of command is it?
     
 };
 
@@ -309,12 +313,13 @@ void (*nextioNBufferOverflowCallback)();
  void (*startSdUpgradeCallback)();
 // std::function<void()> startSdUpgradeCallback;
 
-bool prepRetNumber(uint8_t returnCode, numberCallback retCallback, 
-                   failureCallback failCallback, size_t timeout);
-bool prepRetString(uint8_t returnCode, stringCallback retCallback, 
-                   failureCallback failCallback, size_t timeout);
+bool prepRetNumber(uint8_t returnCode, numberCallback retCallback = nullptr, 
+                   failureCallback failCallback = nullptr, size_t timeout = NEX_TIMEOUT_RETURN);
+bool prepRetString(uint8_t returnCode, stringCallback retCallback = nullptr, 
+                   failureCallback failCallback = nullptr, bool start_flag = true,
+                   size_t timeout = NEX_TIMEOUT_RETURN);
 bool prepRetCode(uint8_t returnCode, 
-                 failureCallback failCallback, size_t timeout);                                                        
+                 failureCallback failCallback = nullptr, size_t timeout = NEX_TIMEOUT_COMMAND);                                                        
 
 /* Receive unsigned number
 *
