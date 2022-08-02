@@ -27,6 +27,7 @@
 
 #include "NexConfig.h"
 #include "NexHardwareInterface.h"
+#include "NexTouch.h"
 
 #include <HardwareSerial.h>
 
@@ -104,22 +105,58 @@ enum serialType {HW, SW, HW_USBCON};
     const serialType m_nexSerialType; 
     Stream *m_nexSerial;
     uint32_t m_baud;
+    NexTouch *m_nex_listen_list[];
 
     nexQueuedEvent *m_queuedEvents{nullptr};
 
-/**
- * Read Queued event in the message queue
- * 
- * @retval none
- */
-void ReadQueuedEvents();
 
 /**
- * Get Queued event from the message queue
+ * @brief Move Serial data from hardware to software buffer
  * 
- * @retval nullptr if no queued events to handle
+ * @return true - message finished, ready to parse
+ * @return false - no end of message, nothing else to do this loop
  */
-nexQueuedEvent* GetQueuedEvent();
+bool readSerialData(void);
+
+/**
+ * @brief Handle complete message from Nextion
+ * 
+ * takes any message/event and triggers appropriate response
+ * (usually a callback)
+ * 
+ * @param nex_listen_list - list of pointers to touch event listeners
+ */
+void parseReceivedMessage(NexTouch *nex_listen_list[]);
+
+
+/**** Handle internal Queue of Commands and expected responses ***/
+/**
+ * @brief Add an event to the Queued Commands
+ * 
+ * @param event - command response template
+ * @return true - success
+ * @return false - circular buffer overflow!
+ */
+bool Nextion::enqueue_nexQueueCommands(nexQueuedCommand event);
+
+/**
+ * @brief Get the head of the event queue
+ * 
+ * 
+ * @return event struct
+ * 
+ */
+nexQueuedCommand Nextion::dequeue_nexQueueCommands(void);
+
+/**
+ * @brief Are there events in the queue?
+ * 
+ * @return true - yes, there are events
+ * @return false - no events, don't dequeue an empty queue!
+ */
+bool Nextion::isEmpty_nexQueueCommands(void)
+
+
 
 public:
 
@@ -268,6 +305,13 @@ void (*nextioNBufferOverflowCallback)();
  */
  void (*startSdUpgradeCallback)();
 // std::function<void()> startSdUpgradeCallback;
+
+bool Nextion::prepRetNumber(uint8_t returnCode, numberCallback retCallback, 
+                            failureCallback failCallback, size_t timeout);
+bool Nextion::prepRetString(uint8_t returnCode, stringCallback retCallback, 
+                            failureCallback failCallback, size_t timeout);
+bool Nextion::prepRetCode(uint8_t returnCode, 
+                            failureCallback failCallback, size_t timeout);                                                        
 
 /* Receive unsigned number
 *

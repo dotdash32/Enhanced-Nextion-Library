@@ -61,7 +61,18 @@
 #define NEX_RET_VARIABLE_NAME_TOO_LONG              (0x23)
 #define NEX_RET_SERIAL_BUFFER_OVERFLOW              (0x24)
 
+#define NEX_END_TRANSMISSION_VALUE                  (0xFF)  // what value ends transmission?
+#define NEX_END_TRANSMISSION_LENGTH                 3       // how many of the above to end transmission?
+
+
 const uint32_t Nextion::baudRates[]{2400, 4800, 9600, 19200, 31250, 38400, 57600, 115200, 230400, 250000, 256000, 512000, 921600};
+
+// buffer things
+#define RX_BUFFER_SIZE      64 // big enough for nearly anything??
+
+static byte RX_buffer[RX_BUFFER_SIZE] = {0}; // array to store incoming values in
+static uint8_t RX_ind = 0; // where in the buffer array are we?
+static uint8_t endTransCnt = 0; // how many end of message bytes have we rec'd?
 
 // queued events and size
 static uint8_t _nextion_queued_events[][2] =
@@ -84,7 +95,7 @@ static uint8_t _nextion_queued_events[][2] =
  * 
  * @return whether or not there is data to parse afterward
  */
-bool Nextion::readSerialData()
+bool Nextion::readSerialData(void)
 {
     bool returnVal = false; // assume no data to parse
     while(m_nexSerial->available())
@@ -427,6 +438,43 @@ bool Nextion::findBaud(uint32_t &baud)
     return false; 
 }
 
+bool Nextion::prepRetNumber(uint8_t returnCode, numberCallback retCallback, 
+                            failureCallback failCallback, size_t timeout)
+{
+    nexQueuedCommand event;
+    nexQueuedCommand.successReturnCode = returnCode;
+    nexQueuedCommand.getterCallbaack.numCB = retCallback;
+    nexQueuedCommand.failCB = failCallback;
+    nexQueuedCommand.timeout = timeout;
+
+    // put in queue
+    enqueue_nexQueueCommands(event);
+}
+bool Nextion::prepRetString(uint8_t returnCode, stringCallback retCallback, 
+                            failureCallback failCallback, size_t timeout)
+{
+    nexQueuedCommand event;
+    nexQueuedCommandsuccessReturnCode = returnCode;
+    nexQueuedCommandgetterCallbaack.strCB = retCallback;
+    nexQueuedCommandfailCB = failCallback;
+    nexQueuedCommandtimeout = timeout;
+
+    // put in queue
+    enqueue_nexQueueCommands(event);
+}
+bool Nextion::prepRetCode(uint8_t returnCode, 
+                            failureCallback failCallback, size_t timeout)
+{
+    nexQueuedCommand event ;
+    nexQueuedCommand.successReturnCode = returnCode;
+    nexQueuedCommand.getterCallbaack.numCB = nullptr; // defaults to none
+    nexQueuedCommand.failCB = failCallback;
+    nexQueuedCommand.timeout = timeout;
+
+    // put in queue
+    enqueue_nexQueueCommands(event);
+}
+
 /*
  * Receive unt32_t data. 
  * 
@@ -435,47 +483,60 @@ bool Nextion::findBaud(uint32_t &baud)
  *
  * @retval true - success. 
  * @retval false - failed.
+ * 
+ * blocking code!! for backwards compatibility
+ * 
+ * One caveat: if an event callback triggers another blocking wait,
+ * the first blocking wait will fail (wrong data in buffer)
  *
  */
 bool Nextion::recvRetNumber(uint32_t *number, size_t timeout)
 {
-    bool ret = false;
-    uint8_t temp[8] = {0};
+    bool ret = true;
+    uint32_t start{millis()};
 
     if (!number)
     {
-        goto __return;
-    }
-
-    ReadQueuedEvents();
-    if (sizeof(temp) != readBytes(temp, sizeof(temp),timeout))
-    {
-        goto __return;
-    }
-
-    if (temp[0] == NEX_RET_NUMBER_HEAD
-        && temp[5] == 0xFF
-        && temp[6] == 0xFF
-        && temp[7] == 0xFF
-        )
-    {
-        *number = ((uint32_t)temp[4] << 24) | ((uint32_t)temp[3] << 16) | ((uint32_t)temp[2] << 8) | (temp[1]);
-        ret = true;
-    }
-
-__return:
-
-    if (ret) 
-    {
-        dbSerialPrint("recvRetNumber: ");
-        dbSerialPrintln(*number);
+        dbSerialPrintln("recvRetNumber err, no number pointer");
     }
     else
     {
-        dbSerialPrintln("recvRetNumber err");
+        ret &= prepRetNumber(NEX_RET_NUMBER_HEAD, null, timeout); // start the queue
+            // if it's false, we failed anyway
+        while (!isEmpty_nexQueueCommands() && ((millis()-start)<timeout))
+        {
+            // while there are other events (ahead of us with actual callbacks)
+            // just sit here and loop
+            nexLoop();
+        }
+
+        // when we break, our event should be the last one processed
+            // probable bug: if we added another thing to queue, above is false
+        if (NEX_RET_NUMBER_HEAD == RX_buffer[0] && RX_ind == 7)
+        {
+            *number = ((uint32_t)RX_buffer[4] << 24) | ((uint32_t)RX_buffer[3] << 16) |
+                    ((uint32_t)RX_buffer[2] << 8)  | (RX_buffer[1]);
+            ret &= true;
+        }
+        else
+        {
+            ret = false;
+        }
+
+        if (ret) 
+    if (ret) 
+        if (ret) 
+        {
+            dbSerialPrint("recvRetNumber: ");
+            dbSerialPrintln(*number);
+        }
+        else
+        {
+            dbSerialPrintln("recvRetNumber err");
+        }
+        
+        return ret;
     }
-    
-    return ret;
 }
 
 /*
@@ -490,43 +551,50 @@ __return:
  */
 bool Nextion::recvRetNumber(int32_t *number, size_t timeout)
 {
-    bool ret = false;
-    uint8_t temp[8] = {0};
+    bool ret = true;
+    uint32_t start{millis()};
 
     if (!number)
     {
-        goto __return;
-    }
-
-    ReadQueuedEvents();
-    if (sizeof(temp) != readBytes(temp, sizeof(temp), timeout))
-    {
-        goto __return;
-    }
-
-    if (temp[0] == NEX_RET_NUMBER_HEAD
-        && temp[5] == 0xFF
-        && temp[6] == 0xFF
-        && temp[7] == 0xFF
-        )
-    {
-        *number = ((int32_t)temp[4] << 24) | ((int32_t)temp[3] << 16) | ((int32_t)temp[2] << 8) | (temp[1]);
-        ret = true;
-    }
-
-__return:
-
-    if (ret) 
-    {
-        dbSerialPrint("recvRetNumber :");
-        dbSerialPrintln(*number);
+        dbSerialPrintln("recvRetNumber err, no number pointer");
     }
     else
     {
-        dbSerialPrintln("recvRetNumber err");
+        ret &= prepRetNumber(NEX_RET_NUMBER_HEAD, null, timeout); // start the queue
+            // if it's false, we failed anyway
+        while (!isEmpty_nexQueueCommands() && ((millis()-start)<timeout))
+        {
+            // while there are other events (ahead of us with actual callbacks)
+            // just sit here and loop
+            nexLoop();
+        }
+
+        // when we break, our event should be the last one processed
+        if (NEX_RET_NUMBER_HEAD == RX_buffer[0] && RX_ind == 7)
+        {
+            *number = ((int32_t)RX_buffer[4] << 24) | ((int32_t)RX_buffer[3] << 16) |
+                    ((int32_t)RX_buffer[2] << 8)  | (RX_buffer[1]);
+            ret &= true;
+        }
+        else
+        {
+            ret = false;
+        }
+
+        if (ret) 
+    if (ret) 
+        if (ret) 
+        {
+            dbSerialPrint("recvRetNumber: ");
+            dbSerialPrintln(*number);
+        }
+        else
+        {
+            dbSerialPrintln("recvRetNumber err");
+        }
+        
+        return ret;
     }
-    
-    return ret;
 }
 
 /*
@@ -542,50 +610,35 @@ __return:
  */
 bool Nextion::recvRetString(String &str, size_t timeout, bool start_flag)
 {
-    str = "";
-    bool ret{false};
-    bool str_start_flag {!start_flag};
-    uint8_t cnt_0xff = 0;
-    uint8_t c = 0;
-    ReadQueuedEvents();
+    bool ret = true;
     uint32_t start{millis()};
-//    size_t avail{(size_t)m_nexSerial->available()};
-    while(ret == false && (millis()-start)<timeout)
-    {
-        while (m_nexSerial->available())
-        {
-            c = m_nexSerial->read();
-            if (str_start_flag)
-            {
-                if (0xFF == c)
-                {
-                    cnt_0xff++;                    
-                    if (cnt_0xff >= 3)
-                    {
-                        ret = true;
-                        break;
-                    }
-                }
-                else
-                {
-                    str += (char)c;
-                }
-            }
-            else if (NEX_RET_STRING_HEAD == c)
-            {
-                str_start_flag = true;
-            }
-            yield();
-        }
-        delayMicroseconds(20);
-        yield();
-    }
-    dbSerialPrint("recvRetString[");
-    dbSerialPrint(str.length());
-    dbSerialPrint(",");
-    dbSerialPrint(str);
-    dbSerialPrintln("]");
+    str = "";
 
+    ret &= prepRetString(NEX_RET_STRING_HEAD, null, timeout); // start the queue
+        // if it's false, we failed anyway
+    while (!isEmpty_nexQueueCommands() && ((millis()-start)<timeout))
+    {
+        // while there are other events (ahead of us with actual callbacks)
+        // just sit here and loop
+        nexLoop();
+    }
+
+    // when we break, our event should be the last one processed
+    if (NEX_RET_STRING_HEAD == RX_buffer[0])
+    {
+        ret &= true;
+        for (uint8_t i = 1; i >= (RX_ind-3); i++)
+        {
+            // add the chars to the string
+            str += (char) RX_buffer[i];
+        }
+        dbSerialPrint("recvRetString[");
+        dbSerialPrint(str.length());
+        dbSerialPrint(",");
+        dbSerialPrint(str);
+        dbSerialPrintln("]");
+    }
+    
     return ret;
 }
 
@@ -622,16 +675,8 @@ bool Nextion::recvRetString(char *buffer, uint16_t &len, size_t timeout, bool st
  */
 void Nextion::sendCommand(const char* cmd)
 {
-    ReadQueuedEvents();
-    // empty in buffer for clean responce
-    /** below code causes lost events!!!
-     * ReadQueuedEvents() should handle it well enough?
-    while (m_nexSerial->available())
-    {
-        m_nexSerial->read();
-    }
-    */
-    
+    nexLoop(); // clear anything that's outstanding
+
     m_nexSerial->print(cmd);
     m_nexSerial->write(0xFF);
     m_nexSerial->write(0xFF);
@@ -655,54 +700,41 @@ void Nextion::sendRawByte(const uint8_t byte)
     m_nexSerial->write(&byte, 1);
 }
 
-size_t Nextion::readBytes(uint8_t* buffer, size_t size, size_t timeout)
-{
-    uint32_t start{millis()};
-    size_t avail{(size_t)m_nexSerial->available()};
-    while(size>avail && (millis()-start)<timeout)
-    {
-        delayMicroseconds(10);
-        yield();
-        avail=m_nexSerial->available();
-    }
-    
-    size_t read=min(size,avail);
-    for(size_t i{read}; i;--i)
-    {
-        *buffer=m_nexSerial->read();
-        ++buffer;
-    }
-    return read;
-}
-
 bool Nextion::recvCommand(const uint8_t command, size_t timeout)
 {
-    bool ret = false;
-    uint8_t temp[4] = {0};
-    ReadQueuedEvents();
-    size_t bytesRead = readBytes((uint8_t *)temp, sizeof(temp), timeout);
-    if (sizeof(temp) != bytesRead)
-    {
-        dbSerialPrint("recv command timeout: ");
+    bool ret = true;
+    uint32_t start{millis()};
 
-        ret = false;
+    ret &= prepRetCode(command, null, timeout); // start the queue
+        // if it's false, we failed anyway
+    while (!isEmpty_nexQueueCommands() && ((millis()-start)<timeout))
+    {
+        // while there are other events (ahead of us with actual callbacks)
+        // just sit here and loop
+        nexLoop();
+    }
+
+    // when we break, our event should be the last one processed
+        // probable bug: if we added another thing to queue, above is false
+    if (command == RX_buffer[0] && RX_ind == 3)
+    {
+        ret &= true;
     }
     else
     {
-        if (temp[0] == command
-            && temp[1] == 0xFF
-            && temp[2] == 0xFF
-            && temp[3] == 0xFF
-            )
-        {
-            ret = true;
-        }
-        else
-        {
-            dbSerialPrint("recv command err value: ");
-            dbSerialPrintln(temp[0]);   
-        }
+        ret = false;
     }
+
+    if (ret) 
+    {
+        dbSerialPrint("recv command: ");
+        dbSerialPrintln(command);
+    }
+    else
+    {
+        dbSerialPrintln("recv command err");
+    }
+        
     return ret;
 }
 
@@ -749,9 +781,10 @@ bool Nextion::RecvTransparendDataModeFinished(size_t timeout)
     return ret;
 }
 
-bool Nextion::nexInit(const uint32_t baud)
+bool Nextion::nexInit(const uint32_t baud, const NexTouch *nex_listen_list[])
 {
     m_baud=NEX_SERIAL_DEFAULT_BAUD;
+    m_nex_listen_list = nex_listen_list; // store internally
     if (m_nexSerialType==HW)
     {
         // try to connect first with default baud as display may have forgot set baud
