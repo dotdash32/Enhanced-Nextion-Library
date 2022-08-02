@@ -393,7 +393,7 @@ void sendRawByte(const uint8_t byte) final;
  * @param timeout  timeout ms
  * @return size_t read bytes can be less that size (timeout case) 
  */
-size_t readBytes(uint8_t* buffer, size_t size, size_t timeout = NEX_TIMEOUT_RETURN) final;
+// size_t readBytes(uint8_t* buffer, size_t size, size_t timeout = NEX_TIMEOUT_RETURN) final;
 
 /* Receive command
 *

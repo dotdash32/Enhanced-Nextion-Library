@@ -62,10 +62,10 @@ void NextionIf::sendRawByte(const uint8_t byte)
     return m_nextion->sendRawByte(byte);
 }
 
-size_t NextionIf::readBytes(uint8_t* buffer, size_t size, size_t timeout)
-{
-    return m_nextion->readBytes(buffer, size, timeout);
-}
+// size_t NextionIf::readBytes(uint8_t* buffer, size_t size, size_t timeout)
+// {
+//     return m_nextion->readBytes(buffer, size, timeout);
+// }
 
 
 bool NextionIf::recvCommand(const uint8_t command, size_t timeout)
