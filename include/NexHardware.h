@@ -60,7 +60,7 @@ struct nexQueuedCommand
         stringCallback strCB;
     };
     failureCallback failCB; // if we get the wrong message header
-    size_t timeout; // how long until we assume its dead?
+    uint16_t expiration_time; // when should we assume it's timed out?
     CommandTypes cmdType; // what kind of command is it?
     
 };
@@ -160,9 +160,25 @@ nexQueuedCommand dequeue_nexQueueCommands(void);
  */
 bool isEmpty_nexQueueCommands(void);
 
-nexQueuedCommand eventQ[CMD_QUEUE_SIZE];
-uint8_t Qback, Qfront = {0};
+nexQueuedCommand peek_nexQueueCommands(void);
 
+nexQueuedCommand eventQ[CMD_QUEUE_SIZE];
+size_t Qback, Qfront = {0};
+
+/**
+ * @brief Remove any commands from the Queue that have timed out
+ * 
+ * @return true - operation removed an event, not clear yet
+ * @return false - no operation performed, front of queue is clear 
+ *                 of expired events
+ */
+bool clearExpiredCommands(void);
+/**
+ * @brief Clear internal stores related to 
+ * serial buffer and command queue
+ * 
+ */
+void resetSerialReader(void);
 
 
 public:

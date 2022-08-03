@@ -168,7 +168,15 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
         }
         case NEX_RET_CMD_FINISHED_OK:
         {
+            if (!isEmpty_nexQueueCommands())
+            {
             nexQueuedCommand event = dequeue_nexQueueCommands();
+                #ifdef LOW_LEVEL_DEBUG
+                    Serial.print("CT: ");
+                    Serial.print(event.cmdType);
+                    Serial.print(", isEmpty: ");
+                    Serial.println(isEmpty_nexQueueCommands());
+                #endif /* LOW_LEVEL_DEBUG*/
             RX_ind_old = RX_ind; // store separately
             memcpy(RX_buf_old, RX_buffer, RX_ind); // store "safely" for waiters
             if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
@@ -176,6 +184,7 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                 // got wrong code back, call failure callback
                 event.failCB(RX_buffer[0]);
                 // otherwise, it succeeded and we do nothing
+                }
             }
             break;
         }
@@ -373,6 +382,43 @@ bool Nextion::isEmpty_nexQueueCommands(void)
     return (Qfront == Qback); // at same spot, nothing to remove
 }
 
+nexQueuedCommand Nextion::peek_nexQueueCommands(void)
+{
+    return eventQ[Qfront]; // look, but don't remove
+}
+
+bool Nextion::clearExpiredCommands(void)
+{
+    bool returnVal = false; // assume there's nothing to clean up
+    if(!isEmpty_nexQueueCommands())
+    {
+        // only operate on a not empty queue!
+        nexQueuedCommand event = peek_nexQueueCommands();
+        if (millis() >= event.expiration_time)
+        {
+            // event is TOO OLD
+            dequeue_nexQueueCommands(); // formally pull it out
+            returnVal = true;
+            #ifdef LOW_LEVEL_DEBUG
+                Serial.println("removed old event! ");
+            #endif
+        }
+    }
+    return returnVal;
+}
+
+void Nextion::resetSerialReader(void)
+{
+    // reset the buffer indices
+    RX_ind = 0;
+    endTransCnt = 0;
+
+    // clear the queue
+    while(!isEmpty_nexQueueCommands())
+    {
+        dequeue_nexQueueCommands(); 
+    }
+}
 
 
 #ifdef NEX_ENABLE_HW_SERIAL
@@ -438,6 +484,7 @@ Nextion::~Nextion()
 bool Nextion::connect()
 {
     m_nexSerial->flush(); // clear before send at start
+    resetSerialReader(); // clear internal registers
     sendCommand("");
     sendCommand("connect");
     String resp;
@@ -490,7 +537,7 @@ bool Nextion::prepRetNumber(uint8_t returnCode, numberCallback retCallback,
     event.successReturnCode = returnCode;
     event.numCB = retCallback;
     event.failCB = failCallback;
-    event.timeout = timeout;
+    event.expiration_time = millis() + timeout;
     event.cmdType = CT_number;
 
     // put in queue
@@ -504,7 +551,7 @@ bool Nextion::prepRetString(uint8_t returnCode, stringCallback retCallback,
     event.successReturnCode = returnCode;
     event.strCB = retCallback;
     event.failCB = failCallback;
-    event.timeout = timeout;
+    event.expiration_time = millis() + timeout;
     event.cmdType = start_flag ? CT_stringHead : CT_stringHeadless; //which type of string
 
     // put in queue
@@ -517,7 +564,7 @@ bool Nextion::prepRetCode(uint8_t returnCode,
     event.successReturnCode = returnCode;
     event.numCB = nullptr; // defaults to none
     event.failCB = failCallback;
-    event.timeout = timeout;
+    event.expiration_time = millis() + timeout;
     event.cmdType = CT_command;
 
     // put in queue
@@ -552,7 +599,7 @@ bool Nextion::recvRetNumber(uint32_t *number, size_t timeout)
     {
         ret &= prepRetNumber(NEX_RET_NUMBER_HEAD, nullptr, nullptr, timeout); // start the queue
             // if it's false, we failed anyway
-        while (!isEmpty_nexQueueCommands() && ((millis()-start)<timeout))
+        while (!isEmpty_nexQueueCommands() && ((millis()-start)<=timeout))
         {
             // while there are other events (ahead of us with actual callbacks)
             // just sit here and loop
@@ -610,7 +657,7 @@ bool Nextion::recvRetNumber(int32_t *number, size_t timeout)
     {
         ret &= prepRetNumber(NEX_RET_NUMBER_HEAD, nullptr, nullptr, timeout); // start the queue
             // if it's false, we failed anyway
-        while (!isEmpty_nexQueueCommands() && ((millis()-start)<timeout))
+        while (!isEmpty_nexQueueCommands() && ((millis()-start)<=timeout))
         {
             // while there are other events (ahead of us with actual callbacks)
             // just sit here and loop
@@ -663,7 +710,7 @@ bool Nextion::recvRetString(String &str, size_t timeout, bool start_flag)
 
     ret &= prepRetString(NEX_RET_STRING_HEAD, nullptr, nullptr, start_flag, timeout); // start the queue
         // if it's false, we failed anyway
-    while (!isEmpty_nexQueueCommands() && ((millis()-start)<timeout))
+    while (!isEmpty_nexQueueCommands() && ((millis()-start)<=timeout))
     {
         // while there are other events (ahead of us with actual callbacks)
         // just sit here and loop
@@ -768,7 +815,7 @@ bool Nextion::recvCommand(const uint8_t command, size_t timeout)
 
     ret &= prepRetCode(command, nullptr, timeout); // start the queue
         // if it's false, we failed anyway
-    while (!isEmpty_nexQueueCommands() && ((millis()-start)<timeout))
+    while (!isEmpty_nexQueueCommands() && ((millis()-start)<=timeout))
     {
         // while there are other events (ahead of us with actual callbacks)
         // just sit here and loop
@@ -778,7 +825,7 @@ bool Nextion::recvCommand(const uint8_t command, size_t timeout)
 
     // when we break, our event should be the last one processed
         // probable bug: if we added another thing to queue, above is false
-    if (command == RX_buf_old[0] && RX_ind_old == 3)
+    if (command == RX_buf_old[0] && RX_ind_old == 4)
     {
         ret &= true;
     }
@@ -923,4 +970,5 @@ uint32_t Nextion::GetCurrentBaud()
 void Nextion::nexLoop()
 {
     readSerialData();
+    clearExpiredCommands(); // remove any old commands
 }
