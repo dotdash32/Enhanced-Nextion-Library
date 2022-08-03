@@ -71,7 +71,7 @@
 const uint32_t Nextion::baudRates[]{2400, 4800, 9600, 19200, 31250, 38400, 57600, 115200, 230400, 250000, 256000, 512000, 921600};
 
 // buffer things
-#define RX_BUFFER_SIZE      1024 // big enough for nearly anything? - matches display size
+#define RX_BUFFER_SIZE      128 // big enough for nearly anything? at least 72 (for `comok`)
 
 static byte RX_buffer[RX_BUFFER_SIZE] = {0}; // array to store incoming values in
 static byte RX_buf_old[RX_BUFFER_SIZE] = {0}; // store data we want to read again
@@ -170,20 +170,20 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
         {
             if (!isEmpty_nexQueueCommands())
             {
-            nexQueuedCommand event = dequeue_nexQueueCommands();
+                nexQueuedCommand event = dequeue_nexQueueCommands();
                 #ifdef LOW_LEVEL_DEBUG
                     Serial.print("CT: ");
                     Serial.print(event.cmdType);
                     Serial.print(", isEmpty: ");
                     Serial.println(isEmpty_nexQueueCommands());
                 #endif /* LOW_LEVEL_DEBUG*/
-            RX_ind_old = RX_ind; // store separately
-            memcpy(RX_buf_old, RX_buffer, RX_ind); // store "safely" for waiters
-            if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
-            {
-                // got wrong code back, call failure callback
-                event.failCB(RX_buffer[0]);
-                // otherwise, it succeeded and we do nothing
+                RX_ind_old = RX_ind; // store separately
+                memcpy(RX_buf_old, RX_buffer, RX_ind); // store "safely" for waiters
+                if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
+                {
+                    // got wrong code back, call failure callback
+                    event.failCB(RX_buffer[0]);
+                    // otherwise, it succeeded and we do nothing
                 }
             }
             break;
