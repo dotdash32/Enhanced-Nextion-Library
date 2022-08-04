@@ -175,7 +175,7 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                     Serial.print("CT: ");
                     Serial.print(event.cmdType);
                     Serial.print(", isEmpty: ");
-                    Serial.println(isEmpty_nexQueueCommands());
+                    Serial.println(cmdQ.isEmpty());
                 #endif /* LOW_LEVEL_DEBUG*/
                 if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
                 {
@@ -330,7 +330,7 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                     Serial.print("CT: ");
                     Serial.print(event.cmdType);
                     Serial.print(", isEmpty: ");
-                    Serial.println(isEmpty_nexQueueCommands());
+                    Serial.println(cmdQ.isEmpty());
                 #endif /* LOW_LEVEL_DEBUG*/
 
                 if (event.cmdType == CT_stringHeadless)
@@ -528,7 +528,7 @@ bool Nextion::prepRetCode(uint8_t returnCode,
     return cmdQ.enqueue(event);
 }
 
-bool Nextion::prepRetNumberBlocking(nexResponses *respSlot, size_t timeout)
+bool Nextion::prepRetNumberBlocking(nexResponses *&respSlot, size_t timeout)
 {
     nexQueuedCommand event;
     event.successReturnCode = NEX_RET_NUMBER_HEAD;
@@ -545,7 +545,7 @@ bool Nextion::prepRetNumberBlocking(nexResponses *respSlot, size_t timeout)
     return cmdQ.enqueue(event);
 }
 
-bool Nextion::prepRetStringBlocking(nexResponses *respSlot, bool start_flag,
+bool Nextion::prepRetStringBlocking(nexResponses *&respSlot, bool start_flag,
                                     size_t timeout)
 {
     nexQueuedCommand event;
@@ -563,7 +563,7 @@ bool Nextion::prepRetStringBlocking(nexResponses *respSlot, bool start_flag,
     return cmdQ.enqueue(event);
 }
 
-bool Nextion::prepRetCodeBlcoking(nexResponses *respSlot, uint8_t returnCode,
+bool Nextion::prepRetCodeBlocking(nexResponses *&respSlot, uint8_t returnCode,
                                   size_t timeout)
 {
     nexQueuedCommand event;
@@ -856,7 +856,7 @@ bool Nextion::recvCommand(const uint8_t command, size_t timeout)
     uint32_t start{millis()};
 
     nexResponses *respSlot = nullptr;
-    ret &= prepRetCodeBlcoking(respSlot, command, timeout); // start the queue
+    ret &= prepRetCodeBlocking(respSlot, command, timeout); // start the queue
         // if it's false, we failed anyway
     while (!cmdQ.isEmpty() && ((millis()-start)<=timeout))
     {
