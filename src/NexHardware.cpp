@@ -943,11 +943,10 @@ bool Nextion::RecvTransparendDataModeFinished(size_t timeout)
     return ret;
 }
 
-bool Nextion::nexInit(const uint32_t baud, NexTouch *nex_listen_list[])
+bool Nextion::nexInit(const uint32_t baud)
 {
 
     m_baud=NEX_SERIAL_DEFAULT_BAUD;
-    m_nex_listen_list = nex_listen_list; // store internally
     if (m_nexSerialType==HW)
     {
         // try to connect first with default baud as display may have forgot set baud
@@ -1018,8 +1017,13 @@ uint32_t Nextion::GetCurrentBaud()
     return m_baud;
 }
 
-void Nextion::nexLoop()
+void Nextion::nexLoop(NexTouch *nex_listen_list[])
 {
+    if (nullptr == m_nex_listen_list)
+    {
+        // on first run, save the listen list
+        m_nex_listen_list = nex_listen_list;
+    }
     readSerialData();
     cmdQ.clearExpiredCommands(); // remove any old commands
 }

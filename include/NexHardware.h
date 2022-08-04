@@ -418,7 +418,7 @@ bool RecvTransparendDataModeFinished(size_t timeout = NEX_TIMEOUT_COMMAND) final
  * 
  * @return true if success, false for failure. 
  */
-bool nexInit(const uint32_t baud = NEX_SERIAL_DEFAULT_BAUD, NexTouch *nex_listen_list[] = nullptr);
+bool nexInit(const uint32_t baud = NEX_SERIAL_DEFAULT_BAUD);
 
 /**
  * current baud value
@@ -439,7 +439,7 @@ uint32_t GetCurrentBaud() final;
  * @warning This function must be called repeatedly to response touch events
  *  from Nextion touch panel. Actually, you should place it in your loop function. 
  */
-void nexLoop();
+void nexLoop(NexTouch *nex_listen_list[] = nullptr);
 };
 
 /**
