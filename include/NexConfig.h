@@ -50,6 +50,27 @@
 
 #define NEX_TIMEOUT_TRANSPARENT_DATA_MODE 400
 
+/**
+ * Serial Recieving Buffer Sizes
+ * 
+ * RX_BUFFER_SIZE is the primary buffer that is read into directly after
+ * SerialX.read.  It needs to be at least 72 (for comok), but should be larger.
+ * 
+ * CMD_QUEUE_SIZE is the depth of sent Event Queue.  It keeps track of sent events
+ * and how to respond in code
+ * 
+ * RX_2ND_BUF_SIZE is the size of the secondary buffer (in an array).  It is used
+ * to track responses to respond during blocking loops
+ * 
+ * RX_2ND_ARR_SIZE is the number of entries in the FIFO-like array to store
+ * returned messages. (soft limited to 127 spots)
+ */
+#define RX_BUFFER_SIZE      128 // primary data buffer length
+#define CMD_QUEUE_SIZE      8 // depth of sent event queue
+#define RX_2ND_BUF_SIZE     RX_BUFFER_SIZE // width of secondary buffer for responses
+#define RX_2ND_ARR_SIZE     8   // depth of secondary buffer
+
+
 
 /** 
  * Define DEBUG_SERIAL_ENABLE to enable debug serial. 
