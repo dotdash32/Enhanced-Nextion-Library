@@ -276,11 +276,14 @@ bool prepRetString(uint8_t returnCode, stringCallback retCallback = nullptr,
 bool prepRetCode(uint8_t returnCode, 
                  failureCallback failCallback = nullptr, size_t timeout = NEX_TIMEOUT_COMMAND);
 
-bool prepRetNumberBlocking(nexResponses *&respSlot, size_t timeout = NEX_TIMEOUT_RETURN);
+bool prepRetNumberBlocking(nexResponses *&respSlot, size_t *saveSpot,
+                           size_t timeout = NEX_TIMEOUT_RETURN);
 
-bool prepRetStringBlocking(nexResponses *&respSlot, bool start_flag, size_t timeout = NEX_TIMEOUT_RETURN);
+bool prepRetStringBlocking(nexResponses *&respSlot, size_t *saveSpot,
+                           bool start_flag, size_t timeout = NEX_TIMEOUT_RETURN);
 
-bool prepRetCodeBlocking(nexResponses *&respSlot, uint8_t returnCode, size_t timeout = NEX_TIMEOUT_RETURN);
+bool prepRetCodeBlocking(nexResponses *&respSlot, size_t *saveSpot,
+                         uint8_t returnCode, size_t timeout = NEX_TIMEOUT_RETURN);
 
 
 /* Receive unsigned number
