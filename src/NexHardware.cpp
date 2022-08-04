@@ -71,13 +71,15 @@
 const uint32_t Nextion::baudRates[]{2400, 4800, 9600, 19200, 31250, 38400, 57600, 115200, 230400, 250000, 256000, 512000, 921600};
 
 // buffer things
-#define RX_BUFFER_SIZE      128 // big enough for nearly anything? at least 72 (for `comok`)
-
 static byte RX_buffer[RX_BUFFER_SIZE] = {0}; // array to store incoming values in
-static byte RX_buf_old[RX_BUFFER_SIZE] = {0}; // store data we want to read again
 static uint16_t RX_ind = 0; // where in the buffer array are we?
-static uint16_t RX_ind_old = 0; // save array pos for blocking loops
 static uint8_t endTransCnt = 0; // how many end of message bytes have we rec'd?
+// static byte RX_buf_old[RX_BUFFER_SIZE] = {0}; // store data we want to read again
+// static uint16_t RX_ind_old = 0; // save array pos for blocking loops
+
+static nexResponses respQ[RX_2ND_ARR_SIZE]; // array of responses
+static size_t respQNextSpot = 0; // where can we stick the next value?
+#define respQ_INVALID_LOCATION  -1 // if we get this value, do NOT store values
 
 /**
  * 
@@ -177,14 +179,13 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                     Serial.print(", isEmpty: ");
                     Serial.println(isEmpty_nexQueueCommands());
                 #endif /* LOW_LEVEL_DEBUG*/
-                RX_ind_old = RX_ind; // store separately
-                memcpy(RX_buf_old, RX_buffer, RX_ind); // store "safely" for waiters
                 if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
                 {
                     // got wrong code back, call failure callback
                     event.failCB(RX_buffer[0]);
                     // otherwise, it succeeded and we do nothing
                 }
+                storeDataInRespQ(&event);
             }
             break;
         }
@@ -231,14 +232,13 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                 else
                 {
                     // we have correct return code, now return the string
-                    RX_ind_old = RX_ind; // store separately
-                    memcpy(RX_buf_old, RX_buffer, RX_ind); // store "safely"
                     if (event.strCB != nullptr)
                     {
                         // there exists a string callback to send to
-                        event.strCB( reinterpret_cast<char*>(&RX_buf_old[1]), RX_ind - 3);
+                        event.strCB( reinterpret_cast<char*>(&RX_buffer[1]), RX_ind - 3);
                             // adjust buffer start and length to account for pre/post fixes
                     }
+                    storeDataInRespQ(&event);
                 }
             }
             break;
@@ -257,13 +257,13 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                 else
                 {
                     // correct return code, now return the number through callback
-                    memcpy(RX_buf_old, RX_buffer,RX_ind_old); // store "safely"
                     if (event.numCB != nullptr)
                     {
                         int32_t number = ((uint32_t)RX_buffer[4] << 24) | ((uint32_t)RX_buffer[3] << 16) | 
                                         ((uint32_t)RX_buffer[2] << 8) | (RX_buffer[1]);
                         event.numCB(number);
                     }
+                    storeDataInRespQ(&event);
                 }
             }
             break;
@@ -338,14 +338,13 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                 if (event.cmdType == CT_stringHeadless)
                 {
                     // we expect a string WITHOUT a start header
-                    RX_ind_old = RX_ind;
-                    memcpy(RX_buf_old, RX_buffer,RX_ind); // store "safely"
                     if(event.strCB != nullptr)
                     {
                         // there exists a string callback to send to
                         event.strCB( reinterpret_cast<char*>(&RX_buffer[0]), RX_ind - 2);
                             // adjust buffer start and length to account for post fixes
                     }
+                    storeDataInRespQ(&event);
                 }
                 else if (event.failCB!=nullptr)
                 {
@@ -363,9 +362,13 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
 }
 
 /** handle internal command queue **/
-bool Nextion::enqueue_nexQueueCommands(nexQueuedCommand event)
+bool Nextion::enqueue_nexQueueCommands(nexQueuedCommand event, size_t* saveSpot)
 {
     eventQ[Qback] = event;
+    if(nullptr != saveSpot)
+    {
+        saveSpot = Qback; // were we did the insertion
+    }
     Qback = (Qback+1) % CMD_QUEUE_SIZE;
     return (Qback != Qfront); // if head/tail at same spot, we overflowed
 }
@@ -380,6 +383,11 @@ nexQueuedCommand Nextion::dequeue_nexQueueCommands(void)
 bool Nextion::isEmpty_nexQueueCommands(void)
 {
     return (Qfront == Qback); // at same spot, nothing to remove
+}
+
+bool Nextion::passedIndex_nexQueueCommands(size_t saveSpot)
+{
+    
 }
 
 nexQueuedCommand Nextion::peek_nexQueueCommands(void)
@@ -418,6 +426,27 @@ void Nextion::resetSerialReader(void)
     {
         dequeue_nexQueueCommands(); 
     }
+}
+
+// put data into response Queue
+bool Nextion::storeDataInRespQ(nexQueuedCommand *event)
+{
+    bool returnVal = false;
+    if (respQ_INVALID_LOCATION != event->respQSpot)
+    {
+        nexResponses *response = &respQ[event->respQSpot]; // get pointer
+        response->RX_ind=RX_ind;
+        memcpy(response->RX_buf, RX_buffer, RX_ind);
+        returnVal = true;
+    }
+    return returnVal;
+}
+
+int8_t Nextion::getRespQSpot(void)
+{
+    int8_t temp = respQNextSpot;
+    respQNextSpot = (respQNextSpot+1) % RX_2ND_ARR_SIZE; // wrap around
+    return temp; // pass it out
 }
 
 
@@ -530,6 +559,7 @@ bool Nextion::findBaud(uint32_t &baud)
     return false; 
 }
 
+//TODO: remove returnCode from number and str - not needed
 bool Nextion::prepRetNumber(uint8_t returnCode, numberCallback retCallback, 
                             failureCallback failCallback, size_t timeout)
 {
@@ -539,6 +569,7 @@ bool Nextion::prepRetNumber(uint8_t returnCode, numberCallback retCallback,
     event.failCB = failCallback;
     event.expiration_time = millis() + timeout;
     event.cmdType = CT_number;
+    event.respQSpot = respQ_INVALID_LOCATION; // can't access it!
 
     // put in queue
     return enqueue_nexQueueCommands(event);
@@ -571,6 +602,59 @@ bool Nextion::prepRetCode(uint8_t returnCode,
     return enqueue_nexQueueCommands(event);
 }
 
+bool Nextion::prepRetNumberBlocking(int8_t *respQSpot, size_t timeout)
+{
+    nexQueuedCommand event;
+    event.successReturnCode = NEX_RET_NUMBER_HEAD;
+    event.numCB = nullptr;
+    event.failCB = nullptr;
+    event.expiration_time = millis() + timeout;
+    event.cmdType = CT_number;
+
+    // get response Queue spot
+    *respQSpot = getRespQSpot();
+    event.respQSpot = *respQSpot; // save into event
+
+    // put in queue
+    return enqueue_nexQueueCommands(event);
+}
+
+bool Nextion::prepRetStringBlocking(int8_t *respQSpot, bool start_flag,
+                                    size_t timeout)
+{
+    nexQueuedCommand event;
+    event.successReturnCode = NEX_RET_STRING_HEAD;
+    event.strCB = nullptr;
+    event.failCB = nullptr;
+    event.expiration_time = millis() + timeout;
+    event.cmdType = start_flag ? CT_stringHead : CT_stringHeadless; //which type of string
+
+    // get response Queue spot
+    *respQSpot = getRespQSpot();
+    event.respQSpot = *respQSpot; // save into event
+
+    // put in queue
+    return enqueue_nexQueueCommands(event);
+}
+
+bool Nextion::prepRetCodeBlcoking(int8_t *respQSpot, uint8_t returnCode,
+                                  size_t timeout)
+{
+    nexQueuedCommand event;
+    event.successReturnCode = returnCode;
+    event.numCB = nullptr; // defaults to none
+    event.failCB = nullptr;
+    event.expiration_time = millis() + timeout;
+    event.cmdType = CT_command;
+
+    // get response Queue spot
+    *respQSpot = getRespQSpot();
+    event.respQSpot = *respQSpot; // save into event
+
+    // put in queue
+    return enqueue_nexQueueCommands(event);
+}
+
 /*
  * Receive unt32_t data. 
  * 
@@ -597,7 +681,8 @@ bool Nextion::recvRetNumber(uint32_t *number, size_t timeout)
     }
     else
     {
-        ret &= prepRetNumber(NEX_RET_NUMBER_HEAD, nullptr, nullptr, timeout); // start the queue
+        size_t respQSpot;
+        ret &= prepRetNumberBlocking(&respQSpot, timeout); // start the queue
             // if it's false, we failed anyway
         while (!isEmpty_nexQueueCommands() && ((millis()-start)<=timeout))
         {
@@ -609,13 +694,28 @@ bool Nextion::recvRetNumber(uint32_t *number, size_t timeout)
 
         // when we break, our event should be the last one processed
             // probable bug: if we added another thing to queue, above is false
-        if (NEX_RET_NUMBER_HEAD == RX_buf_old[0] && RX_ind_old == 7)
+            // propbably fix: uses secondary queue
+        if (respQ_INVALID_LOCATION != respQSpot)
         {
-            *number = ((uint32_t)RX_buf_old[4] << 24) | ((uint32_t)RX_buf_old[3] << 16) |
-                    ((uint32_t)RX_buf_old[2] << 8)  | (RX_buf_old[1]);
-            ret &= true;
+            nexResponses *resp = &respQ[respQSpot];
+            Serial.print("respQ ");
+            Serial.print(respQSpot);
+            Serial.print(", index: ");
+            Serial.print(resp->RX_ind);
+            Serial.println();
+            if (NEX_RET_NUMBER_HEAD == resp->RX_buf[0] && resp->RX_ind == 7)
+            {
+                Serial.println("got values");
+                *number = ((uint32_t)resp->RX_buf[4] << 24) | ((uint32_t)resp->RX_buf[3] << 16) |
+                        ((uint32_t)resp->RX_buf[2] << 8)  | (resp->RX_buf[1]);
+                ret &= true;
+            }
+            else
+            {
+                ret = false;
+            }
         }
-        else
+        else // don't have a read location
         {
             ret = false;
         }
@@ -630,8 +730,8 @@ bool Nextion::recvRetNumber(uint32_t *number, size_t timeout)
             dbSerialPrintln("recvRetNumber err");
         }
         
-        return ret;
     }
+    return ret;
 }
 
 /*
@@ -646,6 +746,10 @@ bool Nextion::recvRetNumber(uint32_t *number, size_t timeout)
  */
 bool Nextion::recvRetNumber(int32_t *number, size_t timeout)
 {
+    bool returnVal = recvRetNumber(reinterpret_cast<uint32_t*>(number), timeout);
+    *number = (int32_t) *number; // recast it
+    return returnVal;
+    /*
     bool ret = true;
     uint32_t start{millis()};
 
@@ -689,6 +793,7 @@ bool Nextion::recvRetNumber(int32_t *number, size_t timeout)
         
         return ret;
     }
+    */
 }
 
 /*
@@ -708,7 +813,8 @@ bool Nextion::recvRetString(String &str, size_t timeout, bool start_flag)
     uint32_t start{millis()};
     str = "";
 
-    ret &= prepRetString(NEX_RET_STRING_HEAD, nullptr, nullptr, start_flag, timeout); // start the queue
+    int8_t respQSpot;
+    ret &= prepRetStringBlocking(&respQSpot, start_flag, timeout); // start the queue
         // if it's false, we failed anyway
     while (!isEmpty_nexQueueCommands() && ((millis()-start)<=timeout))
     {
@@ -719,29 +825,39 @@ bool Nextion::recvRetString(String &str, size_t timeout, bool start_flag)
     } 
 
     // when we break, our event should be the last one processed
-    if (NEX_RET_STRING_HEAD == RX_buf_old[0] || !start_flag)
-    {   
-        uint16_t index = 0; // assume there is no offset
-        if (start_flag)
-        {
-            // we expect a header, so offset by 1
-            index = 1;
-        }
-        ret &= true;
-        for (; index <= (RX_ind_old-3); index++)
-        {
-            // add the chars to the string
-            str += (char) RX_buf_old[index];
-        }
-        dbSerialPrint("recvRetString[");
-        dbSerialPrint(str.length());
-        dbSerialPrint(",");
-        dbSerialPrint(str);
-        dbSerialPrintln("]");
-    }
-    else
+    if(respQ_INVALID_LOCATION != respQSpot)
     {
-        ret = false; // reading failed!
+        nexResponses *resp = &respQ[respQSpot];
+        if ((NEX_RET_STRING_HEAD == resp->RX_buf[0] || !start_flag) &&
+            (resp->RX_ind > 4))
+        {   
+            uint16_t index = 0; // assume there is no offset
+            if (start_flag)
+            {
+                // we expect a header, so offset by 1
+                index = 1;
+            }
+            ret &= true;
+
+            for (; index <= (resp->RX_ind-3); index++)
+            {
+                // add the chars to the string
+                str += (char) resp->RX_buf[index];
+            }
+            dbSerialPrint("recvRetString[");
+            dbSerialPrint(str.length());
+            dbSerialPrint(",");
+            dbSerialPrint(str);
+            dbSerialPrintln("]");
+        }
+        else
+        {
+            ret = false; // reading failed!
+        }
+    }
+    else // don't have a place to store/retrieve data
+    {
+        ret = false;
     }
 
     return ret;
@@ -813,7 +929,8 @@ bool Nextion::recvCommand(const uint8_t command, size_t timeout)
     bool ret = true;
     uint32_t start{millis()};
 
-    ret &= prepRetCode(command, nullptr, timeout); // start the queue
+    int8_t respQSpot;
+    ret &= prepRetCodeBlcoking(&respQSpot, command, timeout); // start the queue
         // if it's false, we failed anyway
     while (!isEmpty_nexQueueCommands() && ((millis()-start)<=timeout))
     {
@@ -824,12 +941,19 @@ bool Nextion::recvCommand(const uint8_t command, size_t timeout)
     }
 
     // when we break, our event should be the last one processed
-        // probable bug: if we added another thing to queue, above is false
-    if (command == RX_buf_old[0] && RX_ind_old == 4)
+    if (respQ_INVALID_LOCATION != respQSpot)
     {
-        ret &= true;
+        nexResponses *resp = &respQ[respQSpot];
+        if (command == resp->RX_buf[0] && resp->RX_ind == 4)
+        {
+            ret &= true;
+        }
+        else
+        {
+            ret = false;
+        }
     }
-    else
+    else // no place to save/retrieve from
     {
         ret = false;
     }

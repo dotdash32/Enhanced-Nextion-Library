@@ -47,7 +47,6 @@ struct nexQueuedEvent
 typedef void (*failureCallback) (uint8_t returnCode);
 typedef void (*numberCallback) (int32_t returnNum);
 typedef void (*stringCallback) (char *buf, uint16_t len);
-#define CMD_QUEUE_SIZE              8 // how many events can we store?
 enum CommandTypes {
     CT_command, CT_number, CT_stringHead, CT_stringHeadless
 };
@@ -62,7 +61,15 @@ struct nexQueuedCommand
     failureCallback failCB; // if we get the wrong message header
     uint16_t expiration_time; // when should we assume it's timed out?
     CommandTypes cmdType; // what kind of command is it?
+    int8_t respQSpot; // if storing response, where to?
     
+};
+
+// struct to store stored responses
+struct nexResponses
+{
+    uint8_t RX_buf[RX_2ND_BUF_SIZE] = {0};
+    size_t  RX_ind = 0;
 };
 
 /**
@@ -141,7 +148,7 @@ void parseReceivedMessage(NexTouch *nex_listen_list[]);
  * @return true - success
  * @return false - circular buffer overflow!
  */
-bool enqueue_nexQueueCommands(nexQueuedCommand event);
+bool enqueue_nexQueueCommands(nexQueuedCommand event, size_t *saveSpot = nullptr);
 
 /**
  * @brief Get the head of the event queue
@@ -162,6 +169,8 @@ bool isEmpty_nexQueueCommands(void);
 
 nexQueuedCommand peek_nexQueueCommands(void);
 
+bool passedIndex_nexQueueCommands(size_t saveSpot);
+
 nexQueuedCommand eventQ[CMD_QUEUE_SIZE];
 size_t Qback, Qfront = {0};
 
@@ -179,6 +188,18 @@ bool clearExpiredCommands(void);
  * 
  */
 void resetSerialReader(void);
+
+/**
+ * @brief Store most recent response data into response queue
+ * at event's saved index
+ * 
+ * @param event - pointer to event
+ * @return true - success, aka valid respQSpot in event
+ * @return false - failure, couldn't store data
+ */
+bool storeDataInRespQ(nexQueuedCommand *event);
+
+int8_t getRespQSpot(void);
 
 
 public:
@@ -335,7 +356,14 @@ bool prepRetString(uint8_t returnCode, stringCallback retCallback = nullptr,
                    failureCallback failCallback = nullptr, bool start_flag = true,
                    size_t timeout = NEX_TIMEOUT_RETURN);
 bool prepRetCode(uint8_t returnCode, 
-                 failureCallback failCallback = nullptr, size_t timeout = NEX_TIMEOUT_COMMAND);                                                        
+                 failureCallback failCallback = nullptr, size_t timeout = NEX_TIMEOUT_COMMAND);
+
+bool prepRetNumberBlocking(int8_t *respQSpot, size_t timeout = NEX_TIMEOUT_RETURN);
+
+bool prepRetStringBlocking(int8_t *respQSpot, bool start_flag, size_t timeout = NEX_TIMEOUT_RETURN);
+
+bool prepRetCodeBlcoking(int8_t *respQSpot, uint8_t returnCode, size_t timeout = NEX_TIMEOUT_RETURN);
+
 
 /* Receive unsigned number
 *
