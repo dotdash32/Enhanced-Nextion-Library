@@ -600,7 +600,6 @@ bool Nextion::prepRetCodeBlocking(nexResponses *&respSlot, size_t *saveSpot,
 bool Nextion::recvRetNumber(uint32_t *number, size_t timeout)
 {
     bool ret = true;
-    uint32_t start{millis()};
 
     if (!number)
     {
@@ -739,7 +738,6 @@ bool Nextion::recvRetNumber(int32_t *number, size_t timeout)
 bool Nextion::recvRetString(String &str, size_t timeout, bool start_flag)
 {
     bool ret = true;
-    uint32_t start{millis()};
     str = "";
 
     nexResponses *respSlot = nullptr;
@@ -856,7 +854,6 @@ void Nextion::sendRawByte(const uint8_t byte)
 bool Nextion::recvCommand(const uint8_t command, size_t timeout)
 {
     bool ret = true;
-    uint32_t start{millis()};
 
     nexResponses *respSlot = nullptr;
     size_t saveSpot;

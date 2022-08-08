@@ -89,7 +89,7 @@ enum serialType {HW, SW, HW_USBCON};
     const serialType m_nexSerialType; 
     Stream *m_nexSerial;
     uint32_t m_baud;
-    NexTouch **m_nex_listen_list;
+    NexTouch **m_nex_listen_list = nullptr;
 
     nexQueuedEvent *m_queuedEvents{nullptr};
 
