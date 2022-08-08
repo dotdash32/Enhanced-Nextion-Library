@@ -624,14 +624,8 @@ bool Nextion::recvRetNumber(uint32_t *number, size_t timeout)
             // propbably fix: uses secondary queue
         if (nullptr != respSlot)
         {
-            Serial.print("respQ ");
-            Serial.print(nullptr != respSlot);
-            Serial.print(", index: ");
-            Serial.print(respSlot->RX_ind);
-            Serial.println();
             if (NEX_RET_NUMBER_HEAD == respSlot->RX_buf[0] && respSlot->RX_ind == 8)
             {
-                Serial.println("got values");
                 *number = ((uint32_t)respSlot->RX_buf[4] << 24) |
                           ((uint32_t)respSlot->RX_buf[3] << 16) |
                           ((uint32_t)respSlot->RX_buf[2] << 8)  |
@@ -677,51 +671,6 @@ bool Nextion::recvRetNumber(int32_t *number, size_t timeout)
     bool returnVal = recvRetNumber(reinterpret_cast<uint32_t*>(number), timeout);
     *number = (int32_t) *number; // recast it
     return returnVal;
-    /*
-    bool ret = true;
-    uint32_t start{millis()};
-
-    if (!number)
-    {
-        dbSerialPrintln("recvRetNumber err, no number pointer");
-    }
-    else
-    {
-        ret &= prepRetNumber(NEX_RET_NUMBER_HEAD, nullptr, nullptr, timeout); // start the queue
-            // if it's false, we failed anyway
-        while (!isEmpty_nexQueueCommands() && ((millis()-start)<=timeout))
-        {
-            // while there are other events (ahead of us with actual callbacks)
-            // just sit here and loop
-            nexLoop();
-            yield();
-        }
-
-        // when we break, our event should be the last one processed
-        if (NEX_RET_NUMBER_HEAD == RX_buf_old[0] && RX_ind_old == 7)
-        {
-            *number = ((int32_t)RX_buf_old[4] << 24) | ((int32_t)RX_buf_old[3] << 16) |
-                    ((int32_t)RX_buf_old[2] << 8)  | (RX_buf_old[1]);
-            ret &= true;
-        }
-        else
-        {
-            ret = false;
-        }
-
-        if (ret) 
-        {
-            dbSerialPrint("recvRetNumber: ");
-            dbSerialPrintln(*number);
-        }
-        else
-        {
-            dbSerialPrintln("recvRetNumber err");
-        }
-        
-        return ret;
-    }
-    */
 }
 
 /*
@@ -766,7 +715,7 @@ bool Nextion::recvRetString(String &str, size_t timeout, bool start_flag)
             }
             ret &= true;
 
-            for (; index <= (respSlot->RX_ind-3); index++)
+            for (; index <= (respSlot->RX_ind-4); index++)
             {
                 // add the chars to the string
                 str += (char) respSlot->RX_buf[index];
