@@ -4,6 +4,14 @@
  * @par How to Use
  * This example demonstrates both blocking and non-blocking code snippets
  * to set and access various data types inside Nextion Components.
+ * 
+ * 3 Functions by 3 data types (unsigned num, signed num, string)
+ * 1: basic button events - sends simple button events, make sure we don't 
+ * drop any of these while doing other things
+ * 2: Setters - send data MCU -> Nextion, and ensure it makes it there 
+ * consisntently and without interfering
+ * 3: Getters - retrieve data Nextion -> MCU, ensuring alignment and good
+ * return data.
  *
  * @author  Josh DeWitt (https://github.com/dotash32)
  * @date    2022/8/5
@@ -53,6 +61,7 @@ SoftwareSerial mySerial(D2, D1); // RX, TX
 // Logic Analyzer busy pins
 #define callback_busy_pin1   0
 #define setter_busy_pin1     1
+#define getter_busy_pin1     2
 
 
 // Declare Nextion Instance
@@ -81,7 +90,7 @@ NexButton   snGen       (next,  0, 13, "snGen",      &p0);
 NexNumber   n1          (next,  0, 14, "n1",         &p0);
 NexDSButton ReqStrGet   (next,  0, 15, "ReqStrGet",  &p0);
 NexButton   strGen      (next,  0, 16, "strGen",     &p0);
-NexNumber   t1          (next,  0, 17, "t1",         &p0);
+NexText     t1          (next,  0, 17, "t1",         &p0);
 NexVariable letters     (next,  0, 18, "letters",    &p0); // lookup table
 NexTimer    getTmr      (next,  0, 20, "getTmr",     &p0);
 
@@ -118,6 +127,7 @@ void basicBtn_callback(void *ptr);
 void reset_callback(void *ptr);
 void checkSetters(void);
 void requester_callback(void* ptr);
+void reqGetter_callback(void* ptr);
 
 
 
@@ -129,12 +139,13 @@ void setup()
 {
     pinMode(callback_busy_pin1, OUTPUT);
     pinMode(setter_busy_pin1, OUTPUT);
+    pinMode(getter_busy_pin1, OUTPUT);
 
     digitalWrite(callback_busy_pin1, HIGH);
     Serial.begin(9600);
 
     // Initialize Nextion connection with selected baud in this case 115200
-    if(!next->nexInit(9600))
+    if(!next->nexInit(115200))
     {
         Serial.println("nextion init fails"); 
     }
@@ -150,11 +161,27 @@ void setup()
     ReqUNum.attachPop(requester_callback, &ReqUNum);
     ReqSNum.attachPop(requester_callback, &ReqSNum);
     ReqStr.attachPop(requester_callback, &ReqStr);
+    n0.attachPop(reqGetter_callback, &n0);
+    n1.attachPop(reqGetter_callback, &n1);
+    t1.attachPop(reqGetter_callback, &t1);
+    
 
     digitalWrite(callback_busy_pin1, LOW);
     digitalWrite(setter_busy_pin1, LOW);    
+    digitalWrite(getter_busy_pin1, LOW);
     Serial.println("Ready!");
 
+    n1.setValue(-1);
+    int32_t num = 0;
+    #ifndef USE_NON_BLOCKING
+        if(!n1.getValue(&num))
+        {
+            Serial.print("Signed get failed!    ");
+        }
+        Serial.print("Got Signed Number: ");
+        Serial.println(num);
+    #else  
+    #endif
 
 }
 
@@ -185,6 +212,7 @@ void basicBtn_callback(void *ptr)
             Serial.println();
         #endif
     }
+    delayMicroseconds(10);
     digitalWrite(callback_busy_pin1, LOW);
 }
 
@@ -206,7 +234,10 @@ void checkSetters(void)
         // send update
         digitalWrite(setter_busy_pin1, HIGH);
         #ifndef USE_NON_BLOCKING
-            x0.setValue(millis()/100);
+            if(!x0.setValue(millis()/100))
+            {
+                Serial.println("unsigned Num failed!");
+            }
         #else  
         #endif
         digitalWrite(setter_busy_pin1, LOW);
@@ -217,7 +248,10 @@ void checkSetters(void)
         // send update
         digitalWrite(setter_busy_pin1, HIGH);
         #ifndef USE_NON_BLOCKING
-            x1.setValue( (int32_t) -millis()/100);
+            if(!x1.setValue( (int32_t) -millis()/100))
+            {
+                Serial.println("signed Num failed!");
+            }
         #else  
         #endif
         digitalWrite(setter_busy_pin1, LOW);
@@ -226,9 +260,13 @@ void checkSetters(void)
         sStr_time = millis();
         // send update
         digitalWrite(setter_busy_pin1, HIGH);
-        sprintf(buf, "%02d:%02d",millis()/60000, millis()/1000 % 60);
+        sprintf(buf, "%02d:%02d.%1d",(int) (millis()/60000),
+                (int) (millis()/1000 % 60), (int) (millis()%100)/10);
         #ifndef USE_NON_BLOCKING
-            t0.setText(buf);
+            if(!t0.setText(buf))
+            {
+                Serial.println("string set failed");
+            }
         #else  
         #endif
         digitalWrite(setter_busy_pin1, LOW);
@@ -246,4 +284,58 @@ void requester_callback(void* ptr)
     else if (&ReqSNum == ptr) sNum = !sNum;
     else if(&ReqStr == ptr)   sStr = !sStr;
     
+}
+
+void reqGetter_callback(void* ptr)
+{
+    if (nullptr == ptr)
+    {
+        //nothing assigned!
+        Serial.println("unregistered getter requester button!");
+    }
+    else if (&n0 == ptr)
+    {
+        digitalWrite(getter_busy_pin1, HIGH);
+        uint32_t num = 0;
+        #ifndef USE_NON_BLOCKING
+            if(!n0.Get_background_color_bco(&num))
+            {
+                Serial.print("unsigned num get failed!    ");
+            }
+            Serial.print("Got Unsigned Number: ");
+            Serial.println(num);
+        #else  
+        #endif
+        digitalWrite(getter_busy_pin1, LOW);
+    }
+    else if (&n1 == ptr)
+    {
+        digitalWrite(getter_busy_pin1, HIGH);
+        int32_t num = 0;
+        #ifndef USE_NON_BLOCKING
+            if(!n1.getValue(&num))
+            {
+                Serial.print("Signed get failed!    ");
+            }
+            Serial.print("Got Signed Number: ");
+            Serial.println(num);
+        #else  
+        #endif
+        digitalWrite(getter_busy_pin1, LOW);
+    }
+    else if (&t1 == ptr)
+    {
+        digitalWrite(getter_busy_pin1, HIGH);
+        String str = "";
+        #ifndef USE_NON_BLOCKING
+            if(!t1.getText(str))
+            {
+                Serial.print("string get failed!    ");
+            }
+            Serial.print("Got String : ");
+            Serial.println(str);
+        #else  
+        #endif
+        digitalWrite(getter_busy_pin1, LOW);
+    }
 }
