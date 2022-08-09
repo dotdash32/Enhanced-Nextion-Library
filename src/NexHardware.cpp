@@ -104,25 +104,52 @@ bool Nextion::readSerialData(void)
         }
         if (NEX_END_TRANSMISSION_VALUE == newData && RX_ind > 1)
         {
-            // end of transmission and NOT at first index
-            endTransCnt++;
-            if(endTransCnt == NEX_END_TRANSMISSION_LENGTH)
+            // actually at the end of a message
+            static bool inTerminator = false;
+            if (NEX_RET_NUMBER_HEAD == RX_buffer[0])
             {
-                #ifdef LOW_LEVEL_DEBUG
-                    Serial.println();
-                    Serial.println("        message terminated");
-                    Serial.print  ("        length: "); Serial.print(RX_ind);
-                    Serial.println();
-                #endif /* LOW_LEVEL_DEBUG*/
-            
-                // we have the full transmission ender
-                returnVal = true; // get ready to parse afterward
-                endTransCnt = 0; // reset message
-                RX_ind_old = RX_ind; // store for safety??
-                RX_ind = 0; // reset location in message
-                parseReceivedMessage(m_nex_listen_list); // if we got stuff, decode
-                return true;
+                // if receiving a number, special terminator case
+                // "worst case": 0x71 [FF FF FF FF] (FF FF FF) | return -1
+                inTerminator = (RX_ind >= 6);
             }
+            else
+            {
+                // standard case, just look for 3 consecutive values
+                inTerminator = (NEX_END_TRANSMISSION_VALUE == RX_buffer[RX_ind-2])
+                                != (0 == endTransCnt); // logical XOR
+            }
+            if (inTerminator) // actually at end of message?
+            {
+                // ensure it is continuous
+                endTransCnt++;
+                if(endTransCnt == NEX_END_TRANSMISSION_LENGTH)
+                {
+                    #ifdef LOW_LEVEL_DEBUG
+                        Serial.println();
+                        Serial.println("        message terminated");
+                        Serial.print  ("        length: "); Serial.print(RX_ind);
+                        Serial.println();
+                    #endif /* LOW_LEVEL_DEBUG*/
+                
+                    // we have the full transmission ender
+                    returnVal = true; // get ready to parse afterward
+                    endTransCnt = 0; // reset message
+                    RX_ind_old = RX_ind; // store for safety??
+                    RX_ind = 0; // reset location in message
+                    parseReceivedMessage(m_nex_listen_list); // if we got stuff, decode
+                    return true;
+                }
+            }
+            else
+            {
+                // previous value was not also a terminator, restart count
+                endTransCnt = 0;
+            }
+        }
+        else 
+        {
+            // not a real terminator, reset count
+            endTransCnt = 0;
         }
     }
     return returnVal;
