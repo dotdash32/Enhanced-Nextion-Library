@@ -14,6 +14,10 @@
 
 #include "NexQueues.h"
 
+// inline debuggin
+// #define Q_SAVE_SLOT_DEBUG
+// #define Q_EXPIRATION_DEBUG
+
 // constructor
 NexEventQueue::NexEventQueue()
 {
@@ -30,6 +34,17 @@ bool NexEventQueue::enqueue(nexQueuedCommand event, size_t* saveSpot)
         *saveSpot = Qwrite; // were we did the insertion
     }
     Qwrite++; // don't wrap!
+
+    #ifdef Q_SAVE_SLOT_DEBUG
+        Serial.print("Enqueued!!        ");
+        Serial.print("save index: ");
+        Serial.print(*saveSpot);
+        Serial.print(", Qread: ");
+        Serial.print(Qread);
+        Serial.print(", Qwrite: ");
+        Serial.print(Qwrite);
+        Serial.println();
+    #endif
     
     // if tail is ahead of head, overflowed
     return ((Qwrite+1 %CMD_QUEUE_SIZE) != (Qread %CMD_QUEUE_SIZE)); 
@@ -80,12 +95,33 @@ bool NexEventQueue::passedIndex(size_t *saveSpot)
         // check wrap first
         if (Qwrite < CMD_QUEUE_SIZE && Qread > CMD_QUEUE_SIZE)
         {
+            #ifdef Q_SAVE_SLOT_DEBUG
+                Serial.print("save index: ");
+                Serial.print(*saveSpot);
+                Serial.print(", Qread: ");
+                Serial.print(Qread);
+                Serial.print(", Qwrite: ");
+                Serial.print(Qwrite);
+                Serial.println();
+
+                Serial.println("wrapping index"); // yet to get here lol
+            #endif
             // write index just rolled over, but read has not
             returnVal = ((Qread % CMD_QUEUE_SIZE) > (*saveSpot % CMD_QUEUE_SIZE));
         }
         //no wrap
         if (Qread > *saveSpot)
         {
+            #ifdef Q_SAVE_SLOT_DEBUG
+                Serial.print("Passed Index!!    ");
+                Serial.print("save index: ");
+                Serial.print(*saveSpot);
+                Serial.print(", Qread: ");
+                Serial.print(Qread);
+                Serial.print(", Qwrite: ");
+                Serial.print(Qwrite);
+                Serial.println();
+            #endif
             returnVal = true; // we passed it!
         }
     }
@@ -115,6 +151,14 @@ bool NexEventQueue::clearExpiredCommands(void)
             returnVal = true;
             #ifdef LOW_LEVEL_DEBUG
                 Serial.println("removed old event! ");
+            #endif
+            #ifdef Q_EXPIRATION_DEBUG
+                Serial.println("removed old event! ");
+                Serial.print("      Expires: ");
+                Serial.print(event->expiration_time);
+                Serial.print(" / ");
+                Serial.print(millis());
+                Serial.println();
             #endif
         }
     }

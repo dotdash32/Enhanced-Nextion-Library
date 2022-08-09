@@ -38,7 +38,7 @@ struct nexQueuedCommand
         stringCallback strCB;
     };
     failureCallback failCB; // if we get the wrong message header
-    uint16_t expiration_time; // when should we assume it's timed out?
+    unsigned long expiration_time; // when should we assume it's timed out?
     CommandTypes cmdType; // what kind of command is it?
     nexResponses *response; // if storing response, where to?
     
