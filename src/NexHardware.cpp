@@ -187,7 +187,7 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                     nexQueuedCommand event = cmdQ.dequeue();
                     if (event.failCB!=nullptr)
                     {
-                        event.failCB(RX_buffer[0]);
+                        event.failCB(RX_buffer[0], event.calling_object);
                     }
                 }
             }
@@ -207,7 +207,7 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                 if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
                 {
                     // got wrong code back, call failure callback
-                    event.failCB(RX_buffer[0]);
+                    event.failCB(RX_buffer[0], event.calling_object);
                     // otherwise, it succeeded and we do nothing
                 }
                 respQ.storeData(&event, RX_ind_old, RX_buffer);
@@ -252,7 +252,7 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                 if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
                 {
                     // got wrong code back, call failure callback
-                    event.failCB(RX_buffer[0]);
+                    event.failCB(RX_buffer[0], event.calling_object);
                 }
                 else
                 {
@@ -260,7 +260,8 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                     if (event.strCB != nullptr)
                     {
                         // there exists a string callback to send to
-                        event.strCB( reinterpret_cast<char*>(&RX_buffer[1]), RX_ind_old - 3);
+                        event.strCB(reinterpret_cast<char*>(&RX_buffer[1]), RX_ind_old - 3,
+                                    event.calling_object);
                             // adjust buffer start and length to account for pre/post fixes
                     }
                     respQ.storeData(&event, RX_ind_old, RX_buffer);
@@ -276,7 +277,7 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                 if (RX_buffer[0] != event.successReturnCode && event.failCB!=nullptr)
                 {
                     // got wrong code back, call failure callback
-                    event.failCB(RX_buffer[0]);
+                    event.failCB(RX_buffer[0], event.calling_object);
                     // otherwise, it succeeded and we do nothing
                 }
                 else
@@ -286,7 +287,7 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                     {
                         int32_t number = ((uint32_t)RX_buffer[4] << 24) | ((uint32_t)RX_buffer[3] << 16) | 
                                         ((uint32_t)RX_buffer[2] << 8) | (RX_buffer[1]);
-                        event.numCB(number);
+                        event.numCB(number, event.calling_object);
                     }
                     respQ.storeData(&event, RX_ind_old, RX_buffer);
                 }
@@ -366,14 +367,15 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                     if(event.strCB != nullptr)
                     {
                         // there exists a string callback to send to
-                        event.strCB( reinterpret_cast<char*>(&RX_buffer[0]), RX_ind_old - 2);
+                        event.strCB(reinterpret_cast<char*>(&RX_buffer[0]), RX_ind_old - 2,
+                                    event.calling_object);
                             // adjust buffer start and length to account for post fixes
                     }
                     respQ.storeData(&event, RX_ind_old, RX_buffer);
                 }
                 else if (event.failCB!=nullptr)
                 {
-                    event.failCB(RX_buffer[0]);
+                    event.failCB(RX_buffer[0], event.calling_object);
                 }
             }
 
@@ -510,38 +512,39 @@ bool Nextion::findBaud(uint32_t &baud)
     return false; 
 }
 
-//TODO: remove returnCode from number and str - not needed
-bool Nextion::prepRetNumber(uint8_t returnCode, numberCallback retCallback, 
-                            failureCallback failCallback, size_t timeout)
+bool Nextion::prepRetNumber(numberCallback retCallback, failureCallback failCallback,
+                            NexObject *obj, size_t timeout)
 {
     nexQueuedCommand event;
-    event.successReturnCode = returnCode;
+    event.successReturnCode = NEX_RET_NUMBER_HEAD;
     event.numCB = retCallback;
     event.failCB = failCallback;
     event.expiration_time = millis() + timeout;
     event.cmdType = CT_number;
     event.response = nullptr; // can't access it!
+    event.calling_object = obj;
 
     // put in queue
     return cmdQ.enqueue(event);
 }
-bool Nextion::prepRetString(uint8_t returnCode, stringCallback retCallback, 
-                            failureCallback failCallback, bool start_flag,
-                            size_t timeout)
+bool Nextion::prepRetString(stringCallback retCallback, failureCallback failCallback,
+                            NexObject *obj, bool start_flag, size_t timeout)
 {
     nexQueuedCommand event;
-    event.successReturnCode = returnCode;
+    event.successReturnCode = NEX_RET_STRING_HEAD;
     event.strCB = retCallback;
     event.failCB = failCallback;
     event.expiration_time = millis() + timeout;
     event.cmdType = start_flag ? CT_stringHead : CT_stringHeadless; //which type of string
     event.response = nullptr;
+    event.calling_object = obj;
 
     // put in queue
     return cmdQ.enqueue(event);
 }
 bool Nextion::prepRetCode(uint8_t returnCode, 
-                          failureCallback failCallback, size_t timeout)
+                          failureCallback failCallback, NexObject *obj,
+                          size_t timeout)
 {
     nexQueuedCommand event ;
     event.successReturnCode = returnCode;
@@ -550,6 +553,7 @@ bool Nextion::prepRetCode(uint8_t returnCode,
     event.expiration_time = millis() + timeout;
     event.cmdType = CT_command;
     event.response = nullptr;
+    event.calling_object = obj;
 
     // put in queue
     return cmdQ.enqueue(event);
@@ -564,6 +568,7 @@ bool Nextion::prepRetNumberBlocking(nexResponses *&respSlot, size_t *saveSpot,
     event.failCB = nullptr;
     event.expiration_time = millis() + timeout;
     event.cmdType = CT_number;
+    event.calling_object = nullptr; // don't track this now
 
     // get response Queue spot
     respSlot = respQ.getResponseSlot();
@@ -582,6 +587,7 @@ bool Nextion::prepRetStringBlocking(nexResponses *&respSlot, size_t *saveSpot,
     event.failCB = nullptr;
     event.expiration_time = millis() + timeout;
     event.cmdType = start_flag ? CT_stringHead : CT_stringHeadless; //which type of string
+    event.calling_object = nullptr; // don't track this now
 
     // get response Queue spot
     respSlot = respQ.getResponseSlot();
@@ -600,6 +606,7 @@ bool Nextion::prepRetCodeBlocking(nexResponses *&respSlot, size_t *saveSpot,
     event.failCB = nullptr;
     event.expiration_time = millis() + timeout;
     event.cmdType = CT_command;
+    event.calling_object = nullptr; // don't track this now
 
     // get response Queue spot
     respSlot = respQ.getResponseSlot();
@@ -999,4 +1006,90 @@ void Nextion::nexLoop(NexTouch *nex_listen_list[])
     }
     readSerialData();
     cmdQ.clearExpiredCommands(); // remove any old commands
+}
+
+bool Nextion::setStr(String field, String newText, NexObject *obj, 
+                       failureCallback failCallback, uint32_t timeout)
+{
+    String cmd = field;
+    cmd += "=";
+    cmd += newText; // format command
+    sendCommand(cmd.c_str());
+    return prepRetCode(NEX_RET_CMD_FINISHED_OK, 
+                                  failCallback, obj, timeout);
+}
+
+bool Nextion::setStr(String field, char *buf, NexObject *obj, 
+                        failureCallback failCallback, uint32_t timeout)
+{
+    String cmd = field;
+    cmd += "=";
+    cmd += buf; // format command
+    sendCommand(cmd.c_str());
+    return prepRetCode(NEX_RET_CMD_FINISHED_OK, 
+                                  failCallback, obj, timeout);
+}
+
+bool Nextion::setNum(String field, uint32_t num, NexObject *obj, 
+                       failureCallback failCallback, uint32_t timeout)
+{
+    String cmd = field;
+    cmd += "=0x";
+    char buf[9] = {0}; // create a teeny buffer
+    utoa(num, buf, HEX);
+    if (buf[1] == '\0' || buf[3] == '\0' || buf[5] == '\0' || buf[7] == '\0')
+    {
+        // not byte aligned!  add a leading zero
+        cmd += "0";
+    }
+    cmd += buf;
+    sendCommand(cmd.c_str());
+    return prepRetCode(NEX_RET_CMD_FINISHED_OK, 
+                                  failCallback, obj, timeout);
+}
+
+bool Nextion::setNum(String field, int32_t num, NexObject *obj,
+                       failureCallback failCallback, uint32_t timeout)
+{
+    String cmd = field;
+    cmd += "=0x";
+    char buf[9] = {0}; // create a teeny buffer
+    itoa(num, buf, HEX);
+    if (buf[1] == '\0' || buf[3] == '\0' || buf[5] == '\0' || buf[7] == '\0')
+    {
+        // not byte aligned!  add a leading zero
+        cmd += "0";
+    }
+    cmd += buf;
+    sendCommand(cmd.c_str());
+    return prepRetCode(NEX_RET_CMD_FINISHED_OK, 
+                                  failCallback, obj, timeout);
+}
+
+bool Nextion::getText(String field, stringCallback retCallback,
+                       NexObject *obj, failureCallback failCallback, 
+                       uint32_t timeout)
+{
+    String cmd = String("get ");
+    cmd += field;
+    sendCommand(cmd.c_str());
+    return prepRetString(retCallback, failCallback, obj, 
+                                    false, timeout);
+}
+bool Nextion::getNum(String field, numberCallback retCallback, 
+                       NexObject *obj, failureCallback failCallback, 
+                       uint32_t timeout)
+{
+    String cmd = String("get ");
+    cmd += field;
+    sendCommand(cmd.c_str());
+    return prepRetNumber(retCallback, failCallback, obj, 
+                                    timeout);
+}
+bool Nextion::nbSendCmd(String command, uint8_t returnCode, 
+                          NexObject *obj, failureCallback failCallback, 
+                          uint32_t timeout)
+{
+    sendCommand(command.c_str());
+    return prepRetCode(returnCode, failCallback, obj, timeout);
 }

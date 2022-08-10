@@ -12,6 +12,7 @@
 #pragma once
 #include "NexConfig.h"
 #include "NexHardwareInterface.h"
+
 class Nextion;
 
 
@@ -163,6 +164,20 @@ bool RecvTransparendDataModeFinished(size_t timeout = NEX_TIMEOUT_COMMAND) final
  * @return current baud value
  */
 uint32_t GetCurrentBaud() final;
+
+/**** non-blocking getters/setter ***/
+
+virtual bool setStr(String field, String newText, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
+
+virtual bool setStr(String field, char *buf, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
+
+virtual bool setNum(String field, uint32_t num, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
+
+virtual bool setNum(String field, int32_t num, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
+
+virtual bool getText(String field, stringCallback retCallback, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_RETURN);
+virtual bool getNum(String field, numberCallback retCallback, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_RETURN);
+bool nbSendCmd(String command, uint8_t returnCode, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
 
 
 private: // data

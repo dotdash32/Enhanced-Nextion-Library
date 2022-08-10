@@ -16,6 +16,11 @@
 #endif
 
 
+class NexObject;
+typedef void (*failureCallback) (uint8_t returnCode, NexObject *obj);
+typedef void (*numberCallback) (int32_t returnNum, NexObject *obj);
+typedef void (*stringCallback) (char *buf, uint16_t len, NexObject *obj);
+
 /**
  * @addtogroup CoreAPI 
  * @{ 
@@ -166,6 +171,22 @@ virtual bool RecvTransparendDataModeFinished(size_t timeout) =0;
  * @return current baud value
  */
 virtual uint32_t GetCurrentBaud() =0;
+
+
+/**** non-blocking getters/setter ***/
+
+virtual bool setStr(String field, String newText, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+
+virtual bool setStr(String field, char *buf, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+
+virtual bool setNum(String field, uint32_t num, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+
+virtual bool setNum(String field, int32_t num, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+
+virtual bool getText(String field, stringCallback retCallback, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+virtual bool getNum(String field, numberCallback retCallback, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+
+virtual bool nbSendCmd(String command, uint8_t returnCode, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
 
 };
 

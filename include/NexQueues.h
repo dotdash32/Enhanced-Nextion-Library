@@ -14,6 +14,8 @@
 #include <Arduino.h>
 
 #include "NexConfig.h"
+#include "NexObject.h"
+#include "NextionIf.h" // for the function typedefs
 
 
 // struct to store stored responses
@@ -23,9 +25,7 @@ struct nexResponses
     size_t  RX_ind = 0;
 };
 
-typedef void (*failureCallback) (uint8_t returnCode);
-typedef void (*numberCallback) (int32_t returnNum);
-typedef void (*stringCallback) (char *buf, uint16_t len);
+
 enum CommandTypes {
     CT_command, CT_number, CT_stringHead, CT_stringHeadless
 };
@@ -37,10 +37,11 @@ struct nexQueuedCommand
         numberCallback numCB;
         stringCallback strCB;
     };
-    failureCallback failCB; // if we get the wrong message header
-    unsigned long expiration_time; // when should we assume it's timed out?
+    failureCallback failCB = nullptr; // if we get the wrong message header
+    unsigned long expiration_time = 0; // when should we assume it's timed out?
     CommandTypes cmdType; // what kind of command is it?
-    nexResponses *response; // if storing response, where to?
+    nexResponses *response = nullptr; // if storing response, where to?
+    NexObject *calling_object = nullptr; // what component called this? 
     
 };
 
