@@ -20,6 +20,7 @@ class NexObject;
 typedef void (*failureCallback) (uint8_t returnCode, NexObject *obj);
 typedef void (*numberCallback) (int32_t returnNum, NexObject *obj);
 typedef void (*stringCallback) (char *buf, uint16_t len, NexObject *obj);
+typedef void (*successCallback) (NexObject *obj);
 
 /**
  * @addtogroup CoreAPI 
@@ -175,18 +176,103 @@ virtual uint32_t GetCurrentBaud() =0;
 
 /**** non-blocking getters/setter ***/
 
-virtual bool setStr(String field, String newText, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+/**
+ * @brief Set a String parameter (string input)
+ * 
+ * @param field - which field/command section to write to
+ * @param newText - new textual value to write to parameter
+ * @param succCB - success callback
+ * @param obj - object that called the function
+ * @param failCallback - failure callback
+ * @param timeout - how long before assuming no connection
+ * @return true - message sent successfully
+ * @return false - queue collision!
+ */
+virtual bool setStr(String field, String newText, successCallback succCB, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
 
-virtual bool setStr(String field, char *buf, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+/**
+ * @brief Set a String parameter (char input)
+ * 
+ * @param field - which field/command section to write to
+ * @param buf - new textual value, in const char form
+ * @param succCB - success callback
+ * @param obj - object that called the function
+ * @param failCallback - failure callback
+ * @param timeout - how long before assuming no connection
+ * @return true - message sent successfully
+ * @return false - queue collision!
+ */
+virtual bool setStr(String field, char *buf, successCallback succCB, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
 
-virtual bool setNum(String field, uint32_t num, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+/**
+ * @brief Set a Number parameter (unsigned)
+ * 
+ * @param field - which field/command section to write to
+ * @param num 
+ * @param succCB - success callback
+ * @param obj - object that called the function
+ * @param failCallback - failure callback
+ * @param timeout - how long before assuming no connection
+ * @return true - message sent successfully
+ * @return false - queue collision!
+ */
+virtual bool setNum(String field, uint32_t num, successCallback succCB, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
 
-virtual bool setNum(String field, int32_t num, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+/**
+ * @brief Set a Number parameter (signed)
+ * 
+ * @param field - which field/command section to write to
+ * @param num 
+ * @param succCB - success callback
+ * @param obj - object that called the function
+ * @param failCallback - failure callback
+ * @param timeout - how long before assuming no connection
+ * @return true - message sent successfully
+ * @return false - queue collision!
+ */
+virtual bool setNum(String field, int32_t num, successCallback succCB, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
 
-virtual bool getText(String field, stringCallback retCallback, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+/**
+ * @brief Get a string value
+ * 
+ * @param field - which field/command section to read from
+ * @param retCallback - return callback, sends data to main program
+ * @param obj - object that called the function
+ * @param failCallback - failure callback
+ * @param timeout - how long before assuming no connection
+ * @return true - message sent successfully
+ * @return false - queue collision!
+ */
+virtual bool getStr(String field, stringCallback retCallback, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+
+/**
+ * @brief Get a Number value
+ * 
+ * @param field - which field/command section to read from
+ * @param retCallback - return callback, sends data to main program
+ * @param obj - object that called the function
+ * @param failCallback - failure callback
+ * @param timeout - how long before assuming no connection
+ * @return true - message sent successfully
+ * @return false - queue collision!
+ */
 virtual bool getNum(String field, numberCallback retCallback, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
 
-virtual bool nbSendCmd(String command, uint8_t returnCode, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+/**
+ * @brief Send Command, non-blocking with callbacks
+ * 
+ * @param command - cmd to send to the device
+ * @param returnCode - first byte expected back when command works
+ * @param succCB - success callback
+ *        !! WARNING !! won't get called if there is a more generic callback
+ *          response for that specific command code
+ * @param obj - object that called the function
+ * @param failCallback - failure callback
+ * @param timeout - how long before assuming no connection
+ * @return true - message sent successfully
+ * @return false - queue collision! 
+ */
+virtual bool nbSendCmd(String command, uint8_t returnCode, successCallback succCB, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
 
 };
 

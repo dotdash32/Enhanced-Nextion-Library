@@ -167,17 +167,17 @@ uint32_t GetCurrentBaud() final;
 
 /**** non-blocking getters/setter ***/
 
-virtual bool setStr(String field, String newText, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
+virtual bool setStr(String field, String newText, successCallback succCB = nullptr, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
 
-virtual bool setStr(String field, char *buf, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
+virtual bool setStr(String field, char *buf, successCallback succCB = nullptr, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
 
-virtual bool setNum(String field, uint32_t num, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
+virtual bool setNum(String field, uint32_t num, successCallback succCB = nullptr, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
 
-virtual bool setNum(String field, int32_t num, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
+virtual bool setNum(String field, int32_t num, successCallback succCB = nullptr, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
 
-virtual bool getText(String field, stringCallback retCallback, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_RETURN);
+virtual bool getStr(String field, stringCallback retCallback, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_RETURN);
 virtual bool getNum(String field, numberCallback retCallback, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_RETURN);
-bool nbSendCmd(String command, uint8_t returnCode, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
+bool nbSendCmd(String command, uint8_t returnCode, successCallback succCB = nullptr, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
 
 
 private: // data

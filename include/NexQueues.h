@@ -36,6 +36,7 @@ struct nexQueuedCommand
     {
         numberCallback numCB;
         stringCallback strCB;
+        successCallback succCB; // for command returns 
     };
     failureCallback failCB = nullptr; // if we get the wrong message header
     unsigned long expiration_time = 0; // when should we assume it's timed out?
