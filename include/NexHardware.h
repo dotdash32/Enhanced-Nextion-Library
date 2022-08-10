@@ -119,6 +119,26 @@ void parseReceivedMessage(NexTouch *nex_listen_list[]);
  */
 void resetSerialReader(void);
 
+// setup queueing operations, all internal 
+bool prepRetNumber(numberCallback retCallback = nullptr, 
+                   failureCallback failCallback = nullptr, 
+                   NexObject *obj = nullptr, size_t timeout = NEX_TIMEOUT_RETURN);
+bool prepRetString(stringCallback retCallback = nullptr, 
+                   failureCallback failCallback = nullptr,
+                   NexObject *obj = nullptr, bool start_flag = true,
+                   size_t timeout = NEX_TIMEOUT_RETURN);
+bool prepRetCode(uint8_t returnCode, successCallback succCB = nullptr,
+                 failureCallback failCallback = nullptr,
+                 NexObject *obj = nullptr, size_t timeout = NEX_TIMEOUT_COMMAND);
+
+bool prepRetNumberBlocking(nexResponses *&respSlot, size_t *saveSpot,
+                           size_t timeout = NEX_TIMEOUT_RETURN);
+
+bool prepRetStringBlocking(nexResponses *&respSlot, size_t *saveSpot,
+                           bool start_flag, size_t timeout = NEX_TIMEOUT_RETURN);
+
+bool prepRetCodeBlocking(nexResponses *&respSlot, size_t *saveSpot,
+                         uint8_t returnCode, size_t timeout = NEX_TIMEOUT_RETURN);
 
 public:
 
@@ -267,26 +287,6 @@ void (*nextioNBufferOverflowCallback)();
  */
  void (*startSdUpgradeCallback)();
 // std::function<void()> startSdUpgradeCallback;
-
-bool prepRetNumber(numberCallback retCallback = nullptr, 
-                   failureCallback failCallback = nullptr, 
-                   NexObject *obj = nullptr, size_t timeout = NEX_TIMEOUT_RETURN);
-bool prepRetString(stringCallback retCallback = nullptr, 
-                   failureCallback failCallback = nullptr,
-                   NexObject *obj = nullptr, bool start_flag = true,
-                   size_t timeout = NEX_TIMEOUT_RETURN);
-bool prepRetCode(uint8_t returnCode, successCallback succCB = nullptr,
-                 failureCallback failCallback = nullptr,
-                 NexObject *obj = nullptr, size_t timeout = NEX_TIMEOUT_COMMAND);
-
-bool prepRetNumberBlocking(nexResponses *&respSlot, size_t *saveSpot,
-                           size_t timeout = NEX_TIMEOUT_RETURN);
-
-bool prepRetStringBlocking(nexResponses *&respSlot, size_t *saveSpot,
-                           bool start_flag, size_t timeout = NEX_TIMEOUT_RETURN);
-
-bool prepRetCodeBlocking(nexResponses *&respSlot, size_t *saveSpot,
-                         uint8_t returnCode, size_t timeout = NEX_TIMEOUT_RETURN);
 
 
 /* Receive unsigned number
