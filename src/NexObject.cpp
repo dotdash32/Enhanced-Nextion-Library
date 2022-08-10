@@ -52,12 +52,12 @@ const char* NexObject::getObjPageName(void)
 void NexObject::getObjGlobalPageName(String &gName)
 {
     #ifdef OBJECTS_USE_COMP_NAMES
-    if(_page)
-    {
-        gName += _page->getObjName();
-        gName += ".";
-    }
-    gName +=_name;
+        if(_page)
+        {
+            gName += _page->getObjName();
+            gName += ".";
+        }
+        gName +=_name;
     #else // use array indices
         gName += "p[";
         gName += _pid;
@@ -140,3 +140,49 @@ bool NexObject::refresh()
     sendCommand(cmd.c_str());
     return recvRetCommandFinished();
 }
+
+bool NexObject::setStr(String field, String newText, successCallback succCB,
+                       NexObject *obj, failureCallback failCallback, 
+                       uint32_t timeout)
+{
+    Serial.print("in here!");
+    String newField;
+    getObjGlobalPageName(newField); // address globally
+    newField += ".";
+    newField += field;
+    return NextionIf::setStr(newField, newText, succCB, this, failCallback, timeout);
+}
+
+// bool NexObject::setStr(String field, char *buf, successCallback succCB,
+//                        NexObject *obj, failureCallback failCallback, 
+//                        uint32_t timeout)
+// {
+//     return m_nextion->setStr(field, buf, succCB, obj, failCallback, timeout);
+// }
+
+// bool NexObject::setNum(String field, uint32_t num,  successCallback succCB,
+//                        NexObject *obj, failureCallback failCallback, 
+//                        uint32_t timeout)
+// {
+//     return m_nextion->setNum(field, num, succCB, obj, failCallback, timeout);
+// }
+
+// bool NexObject::setNum(String field, int32_t num,  successCallback succCB,
+//                        NexObject *obj,failureCallback failCallback, 
+//                        uint32_t timeout)
+// {
+//     return m_nextion->setNum(field, num, succCB, obj, failCallback, timeout);
+// }
+
+// bool NexObject::getStr(String field, stringCallback retCallback,
+//                        NexObject *obj, failureCallback failCallback, 
+//                        uint32_t timeout)
+// {
+//     return m_nextion->getStr(field, retCallback, obj, failCallback, timeout);
+// }
+// bool NexObject::getNum(String field, numberCallback retCallback, 
+//                        NexObject *obj, failureCallback failCallback, 
+//                        uint32_t timeout)
+// {
+//     return m_nextion->getNum(field, retCallback, obj, failCallback, timeout);
+// }

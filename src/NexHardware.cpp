@@ -1024,8 +1024,9 @@ bool Nextion::setStr(String field, String newText, successCallback succCB,
                      uint32_t timeout)
 {
     String cmd = field;
-    cmd += "=";
+    cmd += "=\"";
     cmd += newText; // format command
+    cmd += "\""; // add quotes around the value!
     sendCommand(cmd.c_str());
     return prepRetCode(NEX_RET_CMD_FINISHED_OK, succCB, failCallback, 
                        obj, timeout);
@@ -1036,8 +1037,9 @@ bool Nextion::setStr(String field, char *buf, successCallback succCB,
                      uint32_t timeout)
 {
     String cmd = field;
-    cmd += "=";
+    cmd += "=\"";
     cmd += buf; // format command
+    cmd += "\""; // add quotes around the value!
     sendCommand(cmd.c_str());
     return prepRetCode(NEX_RET_CMD_FINISHED_OK, succCB, failCallback,
                        obj, timeout);
