@@ -100,50 +100,50 @@ uint32_t NextionIf::GetCurrentBaud()
 }
 
 bool NextionIf::setStr(String field, String newText, successCallback succCB,
-                       NexObject *obj, failureCallback failCallback, 
+                       failureCallback failCallback, NexObject *obj, 
                        uint32_t timeout)
 {
-    return m_nextion->setStr(field, newText, succCB, obj, failCallback, timeout);
+    return m_nextion->setStr(field, newText, succCB, failCallback, obj, timeout);
 }
 
 bool NextionIf::setStr(String field, char *buf, successCallback succCB,
-                       NexObject *obj, failureCallback failCallback, 
+                       failureCallback failCallback, NexObject *obj, 
                        uint32_t timeout)
 {
-    return m_nextion->setStr(field, buf, succCB, obj, failCallback, timeout);
+    return m_nextion->setStr(field, buf, succCB, failCallback, obj, timeout);
 }
 
 bool NextionIf::setNum(String field, uint32_t num,  successCallback succCB,
-                       NexObject *obj, failureCallback failCallback, 
+                       failureCallback failCallback, NexObject *obj, 
                        uint32_t timeout)
 {
-    return m_nextion->setNum(field, num, succCB, obj, failCallback, timeout);
+    return m_nextion->setNum(field, num, succCB, failCallback, obj, timeout);
 }
 
 bool NextionIf::setNum(String field, int32_t num,  successCallback succCB,
-                       NexObject *obj,failureCallback failCallback, 
+                       failureCallback failCallback, NexObject *obj, 
                        uint32_t timeout)
 {
-    return m_nextion->setNum(field, num, succCB, obj, failCallback, timeout);
+    return m_nextion->setNum(field, num, succCB, failCallback, obj, timeout);
 }
 
 bool NextionIf::getStr(String field, stringCallback retCallback,
-                       NexObject *obj, failureCallback failCallback, 
+                       failureCallback failCallback, NexObject *obj, 
                        uint32_t timeout)
 {
-    return m_nextion->getStr(field, retCallback, obj, failCallback, timeout);
+    return m_nextion->getStr(field, retCallback, failCallback, obj, timeout);
 }
 bool NextionIf::getNum(String field, numberCallback retCallback, 
-                       NexObject *obj, failureCallback failCallback, 
+                       failureCallback failCallback, NexObject *obj, 
                        uint32_t timeout)
 {
-    return m_nextion->getNum(field, retCallback, obj, failCallback, timeout);
+    return m_nextion->getNum(field, retCallback, failCallback, obj, timeout);
 }
 bool NextionIf::nbSendCmd(String command, uint8_t returnCode, 
-                          successCallback succCB, NexObject *obj, 
-                          failureCallback failCallback, uint32_t timeout)
+                          successCallback succCB, failureCallback failCallback,
+                          NexObject *obj, uint32_t timeout)
 {
-    return m_nextion->nbSendCmd(command, returnCode, succCB, obj, 
-                                failCallback, timeout);
+    return m_nextion->nbSendCmd(command, returnCode, succCB, failCallback, 
+                                obj, timeout);
 }
 

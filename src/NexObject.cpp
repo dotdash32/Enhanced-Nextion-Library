@@ -141,48 +141,58 @@ bool NexObject::refresh()
     return recvRetCommandFinished();
 }
 
-bool NexObject::setStr(String field, String newText, successCallback succCB,
-                       NexObject *obj, failureCallback failCallback, 
-                       uint32_t timeout)
+void NexObject::prePendPageName(String &field)
 {
-    Serial.print("in here!");
-    String newField;
-    getObjGlobalPageName(newField); // address globally
-    newField += ".";
-    newField += field;
-    return NextionIf::setStr(newField, newText, succCB, this, failCallback, timeout);
+    String temp = field;
+    field = ""; // empty it out
+    getObjGlobalPageName(field);
+    field += ".";
+    field += temp;
 }
 
-// bool NexObject::setStr(String field, char *buf, successCallback succCB,
-//                        NexObject *obj, failureCallback failCallback, 
-//                        uint32_t timeout)
-// {
-//     return m_nextion->setStr(field, buf, succCB, obj, failCallback, timeout);
-// }
+bool NexObject::setStr(String field, String newText, successCallback succCB,
+                       failureCallback failCallback, NexObject *obj, 
+                       uint32_t timeout)
+{
+    prePendPageName(field);
+    return NextionIf::setStr(field, newText, succCB, failCallback, this, timeout);
+}
 
-// bool NexObject::setNum(String field, uint32_t num,  successCallback succCB,
-//                        NexObject *obj, failureCallback failCallback, 
-//                        uint32_t timeout)
-// {
-//     return m_nextion->setNum(field, num, succCB, obj, failCallback, timeout);
-// }
+bool NexObject::setStr(String field, char *buf, successCallback succCB,
+                       failureCallback failCallback, NexObject *obj, 
+                       uint32_t timeout)
+{
+    prePendPageName(field);
+    return NextionIf::setStr(field, buf, succCB, failCallback, this, timeout);
+}
 
-// bool NexObject::setNum(String field, int32_t num,  successCallback succCB,
-//                        NexObject *obj,failureCallback failCallback, 
-//                        uint32_t timeout)
-// {
-//     return m_nextion->setNum(field, num, succCB, obj, failCallback, timeout);
-// }
+bool NexObject::setNum(String field, uint32_t num,  successCallback succCB,
+                       failureCallback failCallback, NexObject *obj, 
+                       uint32_t timeout)
+{
+    prePendPageName(field);
+    return NextionIf::setNum(field, num, succCB, failCallback, this, timeout);
+}
 
-// bool NexObject::getStr(String field, stringCallback retCallback,
-//                        NexObject *obj, failureCallback failCallback, 
-//                        uint32_t timeout)
-// {
-//     return m_nextion->getStr(field, retCallback, obj, failCallback, timeout);
-// }
-// bool NexObject::getNum(String field, numberCallback retCallback, 
-//                        NexObject *obj, failureCallback failCallback, 
-//                        uint32_t timeout)
-// {
-//     return m_nextion->getNum(field, retCallback, obj, failCallback, timeout);
-// }
+bool NexObject::setNum(String field, int32_t num,  successCallback succCB,
+                       failureCallback failCallback, NexObject *obj,
+                       uint32_t timeout)
+{
+    prePendPageName(field);
+    return NextionIf::setNum(field, num, succCB, failCallback, this, timeout);
+}
+
+bool NexObject::getStr(String field, stringCallback retCallback,
+                       failureCallback failCallback, NexObject *obj, 
+                       uint32_t timeout)
+{
+    prePendPageName(field);
+    return NextionIf::getStr(field, retCallback, failCallback, this, timeout);
+}
+bool NexObject::getNum(String field, numberCallback retCallback, 
+                       failureCallback failCallback, NexObject *obj, 
+                       uint32_t timeout)
+{
+    prePendPageName(field);
+    return NextionIf::getNum(field, retCallback, failCallback, this, timeout);
+}

@@ -1020,7 +1020,7 @@ void Nextion::nexLoop(NexTouch *nex_listen_list[])
 }
 
 bool Nextion::setStr(String field, String newText, successCallback succCB,
-                     NexObject *obj, failureCallback failCallback, 
+                     failureCallback failCallback, NexObject *obj, 
                      uint32_t timeout)
 {
     String cmd = field;
@@ -1033,7 +1033,7 @@ bool Nextion::setStr(String field, String newText, successCallback succCB,
 }
 
 bool Nextion::setStr(String field, char *buf, successCallback succCB, 
-                     NexObject *obj, failureCallback failCallback, 
+                     failureCallback failCallback, NexObject *obj, 
                      uint32_t timeout)
 {
     String cmd = field;
@@ -1046,7 +1046,7 @@ bool Nextion::setStr(String field, char *buf, successCallback succCB,
 }
 
 bool Nextion::setNum(String field, uint32_t num, successCallback succCB, 
-                     NexObject *obj, failureCallback failCallback, 
+                     failureCallback failCallback, NexObject *obj, 
                      uint32_t timeout)
 {
     String cmd = field;
@@ -1065,7 +1065,7 @@ bool Nextion::setNum(String field, uint32_t num, successCallback succCB,
 }
 
 bool Nextion::setNum(String field, int32_t num, successCallback succCB,
-                     NexObject *obj, failureCallback failCallback, 
+                     failureCallback failCallback, NexObject *obj, 
                      uint32_t timeout)
 {
     String cmd = field;
@@ -1084,7 +1084,7 @@ bool Nextion::setNum(String field, int32_t num, successCallback succCB,
 }
 
 bool Nextion::getStr(String field, stringCallback retCallback,
-                     NexObject *obj, failureCallback failCallback, 
+                     failureCallback failCallback, NexObject *obj, 
                      uint32_t timeout)
 {
     String cmd = String("get ");
@@ -1094,8 +1094,8 @@ bool Nextion::getStr(String field, stringCallback retCallback,
                                     false, timeout);
 }
 bool Nextion::getNum(String field, numberCallback retCallback, 
-                       NexObject *obj, failureCallback failCallback, 
-                       uint32_t timeout)
+                     failureCallback failCallback, NexObject *obj, 
+                     uint32_t timeout)
 {
     String cmd = String("get ");
     cmd += field;
@@ -1104,8 +1104,9 @@ bool Nextion::getNum(String field, numberCallback retCallback,
                                     timeout);
 }
 bool Nextion::nbSendCmd(String command, uint8_t returnCode, 
-                        successCallback succCB, NexObject *obj, 
-                        failureCallback failCallback, uint32_t timeout)
+                        successCallback succCB, 
+                        failureCallback failCallback, 
+                        NexObject *obj, uint32_t timeout)
 {
     sendCommand(command.c_str());
     return prepRetCode(returnCode, succCB, failCallback, obj, timeout);

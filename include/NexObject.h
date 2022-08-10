@@ -97,18 +97,36 @@ public: /* methods */
 
     virtual bool setStr(String field, String newText, 
                         successCallback succCB = nullptr, 
-                        NexObject *obj = nullptr, 
                         failureCallback failCallback = nullptr, 
+                        NexObject *obj = nullptr, 
                         uint32_t timeout = NEX_TIMEOUT_COMMAND);
 
-    // virtual bool setStr(String field, char *buf, successCallback succCB = nullptr, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
+    virtual bool setStr(String field, char *buf, 
+                        successCallback succCB = nullptr, 
+                        failureCallback failCallback = nullptr, 
+                        NexObject *obj = nullptr, 
+                        uint32_t timeout = NEX_TIMEOUT_COMMAND);
 
-    // virtual bool setNum(String field, uint32_t num, successCallback succCB = nullptr, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
+    virtual bool setNum(String field, uint32_t num, 
+                        successCallback succCB = nullptr, 
+                        failureCallback failCallback = nullptr, 
+                        NexObject *obj = nullptr, 
+                        uint32_t timeout = NEX_TIMEOUT_COMMAND);
 
-    // virtual bool setNum(String field, int32_t num, successCallback succCB = nullptr, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
+    virtual bool setNum(String field, int32_t num, 
+                        successCallback succCB = nullptr, 
+                        failureCallback failCallback = nullptr, 
+                        NexObject *obj = nullptr, 
+                        uint32_t timeout = NEX_TIMEOUT_COMMAND);
 
-    // virtual bool getStr(String field, stringCallback retCallback, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_RETURN);
-    // virtual bool getNum(String field, numberCallback retCallback, NexObject *obj = nullptr, failureCallback failCallback = nullptr, uint32_t timeout = NEX_TIMEOUT_RETURN);
+    virtual bool getStr(String field, stringCallback retCallback, 
+                        failureCallback failCallback = nullptr, 
+                        NexObject *obj = nullptr, 
+                        uint32_t timeout = NEX_TIMEOUT_RETURN);
+    virtual bool getNum(String field, numberCallback retCallback, 
+                        failureCallback failCallback = nullptr, 
+                        NexObject *obj = nullptr, 
+                        uint32_t timeout = NEX_TIMEOUT_RETURN);
 
 protected: /* methods */
 
@@ -146,6 +164,15 @@ protected: /* methods */
     * @param gName - object page name
     */
     void getObjGlobalPageName(String &gName);
+
+    /**
+     * @brief Convert a attribute to fully sendable address
+     * (aka add "page.component." to the field)
+     * 
+     * @param field - field we want to address
+     */
+    void prePendPageName(String &field);
+
 
 private: /* data */ 
     const uint8_t _pid; /* Page ID */

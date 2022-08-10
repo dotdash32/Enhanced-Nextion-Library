@@ -188,7 +188,7 @@ virtual uint32_t GetCurrentBaud() =0;
  * @return true - message sent successfully
  * @return false - queue collision!
  */
-virtual bool setStr(String field, String newText, successCallback succCB, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+virtual bool setStr(String field, String newText, successCallback succCB, failureCallback failCallback, NexObject *obj, uint32_t timeout) =0;
 
 /**
  * @brief Set a String parameter (char input)
@@ -202,7 +202,7 @@ virtual bool setStr(String field, String newText, successCallback succCB, NexObj
  * @return true - message sent successfully
  * @return false - queue collision!
  */
-virtual bool setStr(String field, char *buf, successCallback succCB, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+virtual bool setStr(String field, char *buf, successCallback succCB, failureCallback failCallback, NexObject *obj, uint32_t timeout) =0;
 
 /**
  * @brief Set a Number parameter (unsigned)
@@ -216,7 +216,7 @@ virtual bool setStr(String field, char *buf, successCallback succCB, NexObject *
  * @return true - message sent successfully
  * @return false - queue collision!
  */
-virtual bool setNum(String field, uint32_t num, successCallback succCB, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+virtual bool setNum(String field, uint32_t num, successCallback succCB, failureCallback failCallback, NexObject *obj, uint32_t timeout) =0;
 
 /**
  * @brief Set a Number parameter (signed)
@@ -230,7 +230,7 @@ virtual bool setNum(String field, uint32_t num, successCallback succCB, NexObjec
  * @return true - message sent successfully
  * @return false - queue collision!
  */
-virtual bool setNum(String field, int32_t num, successCallback succCB, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+virtual bool setNum(String field, int32_t num, successCallback succCB, failureCallback failCallback, NexObject *obj, uint32_t timeout) =0;
 
 /**
  * @brief Get a string value
@@ -243,7 +243,7 @@ virtual bool setNum(String field, int32_t num, successCallback succCB, NexObject
  * @return true - message sent successfully
  * @return false - queue collision!
  */
-virtual bool getStr(String field, stringCallback retCallback, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+virtual bool getStr(String field, stringCallback retCallback, failureCallback failCallback, NexObject *obj, uint32_t timeout) =0;
 
 /**
  * @brief Get a Number value
@@ -256,7 +256,7 @@ virtual bool getStr(String field, stringCallback retCallback, NexObject *obj, fa
  * @return true - message sent successfully
  * @return false - queue collision!
  */
-virtual bool getNum(String field, numberCallback retCallback, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+virtual bool getNum(String field, numberCallback retCallback, failureCallback failCallback, NexObject *obj, uint32_t timeout) =0;
 
 /**
  * @brief Send Command, non-blocking with callbacks
@@ -272,7 +272,7 @@ virtual bool getNum(String field, numberCallback retCallback, NexObject *obj, fa
  * @return true - message sent successfully
  * @return false - queue collision! 
  */
-virtual bool nbSendCmd(String command, uint8_t returnCode, successCallback succCB, NexObject *obj, failureCallback failCallback, uint32_t timeout) =0;
+virtual bool nbSendCmd(String command, uint8_t returnCode, successCallback succCB, failureCallback failCallback, NexObject *obj, uint32_t timeout) =0;
 
 };
 
