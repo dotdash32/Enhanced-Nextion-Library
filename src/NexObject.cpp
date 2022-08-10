@@ -51,12 +51,20 @@ const char* NexObject::getObjPageName(void)
 
 void NexObject::getObjGlobalPageName(String &gName)
 {
+    #ifdef OBJECTS_USE_COMP_NAMES
     if(_page)
     {
         gName += _page->getObjName();
         gName += ".";
     }
     gName +=_name;
+    #else // use array indices
+        gName += "p[";
+        gName += _pid;
+        gName += "].b[";
+        gName += _cid;
+        gName += "]";
+    #endif /* OBJECTS_USE_COMP_NAMES */
 }
 
 bool NexObject::GetObjectWidth( uint32_t &width)

@@ -50,6 +50,9 @@
 
 #define NEX_TIMEOUT_TRANSPARENT_DATA_MODE 400
 
+// use component names (enabled), or arrays p[PID].b[CID] (commented out)
+#define OBJECTS_USE_COMP_NAMES
+
 /**
  * Serial Recieving Buffer Sizes
  * 
