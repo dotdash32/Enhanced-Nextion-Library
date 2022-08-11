@@ -262,14 +262,17 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                 else
                 {
                     // we have correct return code, now return the string
+                    respQ.storeData(&event, RX_ind_old, RX_buffer);
                     if (event.strCB != nullptr)
                     {
                         // there exists a string callback to send to
-                        event.strCB(reinterpret_cast<char*>(&RX_buffer[1]), RX_ind_old - 3,
-                                    event.calling_object);
-                            // adjust buffer start and length to account for pre/post fixes
+                        String retStr = String();
+                        for (size_t i = 1; i < RX_ind_old-3; i++)
+                        {
+                            retStr += (char) RX_buffer[i];
+                        }
+                        event.strCB(retStr, event.calling_object);
                     }
-                    respQ.storeData(&event, RX_ind_old, RX_buffer);
                 }
             }
             break;
@@ -369,14 +372,18 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                 if (event.cmdType == CT_stringHeadless)
                 {
                     // we expect a string WITHOUT a start header
+                    respQ.storeData(&event, RX_ind_old, RX_buffer);
                     if(event.strCB != nullptr)
                     {
                         // there exists a string callback to send to
-                        event.strCB(reinterpret_cast<char*>(&RX_buffer[0]), RX_ind_old - 2,
-                                    event.calling_object);
+                        String retStr = String();
+                        for (size_t i = 1; i < RX_ind_old-3; i++)
+                        {
+                            retStr += (char) RX_buffer[i];
+                        }
+                        event.strCB(retStr, event.calling_object);
                             // adjust buffer start and length to account for post fixes
                     }
-                    respQ.storeData(&event, RX_ind_old, RX_buffer);
                 }
                 else if (RX_buffer[0] == event.successReturnCode && event.succCB != nullptr)
                 {
@@ -1053,7 +1060,7 @@ bool Nextion::setNum(String field, uint32_t num, successCallback succCB,
     cmd += "=0x";
     char buf[9] = {0}; // create a teeny buffer
     utoa(num, buf, HEX);
-    if (buf[1] == '\0' || buf[3] == '\0' || buf[5] == '\0' || buf[7] == '\0')
+    if ((strlen(buf) % 2) != 0)
     {
         // not byte aligned!  add a leading zero
         cmd += "0";
@@ -1072,7 +1079,7 @@ bool Nextion::setNum(String field, int32_t num, successCallback succCB,
     cmd += "=0x";
     char buf[9] = {0}; // create a teeny buffer
     itoa(num, buf, HEX);
-    if (buf[1] == '\0' || buf[3] == '\0' || buf[5] == '\0' || buf[7] == '\0')
+    if ((strlen(buf) % 2) != 0)
     {
         // not byte aligned!  add a leading zero
         cmd += "0";

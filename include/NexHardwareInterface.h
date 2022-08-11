@@ -19,7 +19,7 @@
 class NexObject;
 typedef void (*failureCallback) (uint8_t returnCode, NexObject *obj);
 typedef void (*numberCallback) (int32_t returnNum, NexObject *obj);
-typedef void (*stringCallback) (char *buf, uint16_t len, NexObject *obj);
+typedef void (*stringCallback) (String returnStr, NexObject *obj);
 typedef void (*successCallback) (NexObject *obj);
 
 /**
