@@ -116,6 +116,34 @@ void NexObject::printObjInfo(void)
     dbSerialPrintln("]");
 }
 
+void NexObject::getObjInfo(String &str)
+{
+    if(_page)
+    {
+        str += _page->getObjName();
+    }
+    else
+    {
+        // don't have a human readable page name
+        str += "Page[";
+        str += _pid;
+        str += "]";
+    }
+    str += "."; // page/component separator
+    if(_name)
+    {
+        str += _name;
+    }
+    else
+    {
+        // don't have human readable name
+        str += "Comp[";
+        str += _cid;
+        str += "]";
+    }
+}
+
+
 bool NexObject::setVisible(bool visible)
 {
     String cmd = String("vis ");

@@ -79,6 +79,13 @@ public: /* methods */
     void printObjInfo(void);
 
     /**
+     * @brief Print current object's info into human readable string
+     * 
+     * @param str - string to fill with information
+     */
+    void getObjInfo(String &str);
+
+    /**
      * Hide or Show componen on current page
      *
      * @param visible - true Show component, false Hide component 
