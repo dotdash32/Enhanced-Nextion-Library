@@ -39,7 +39,10 @@
 // #define BUTTON_ALWAYS_PRINT
 
 // Use non-blocking functions
-// #define USE_NON_BLOCKING
+#define USE_NON_BLOCKING
+
+// print success messages?
+#define PRINT_NB_SUCCESS
 
 // timing values
 #define setterFreq  90 // [ms] how often to SEND update to fields
@@ -128,6 +131,10 @@ void reset_callback(void *ptr);
 void checkSetters(void);
 void requester_callback(void* ptr);
 void reqGetter_callback(void* ptr);
+void genSuccess_callback(NexObject *obj);
+void genFailure_callback(uint8_t returnCode, NexObject *obj);
+void number_callback(int32_t num, NexObject *obj);
+void string_callback(String str, NexObject *obj);
 
 
 
@@ -171,27 +178,65 @@ void setup()
     digitalWrite(getter_busy_pin1, LOW);
     Serial.println("Ready!");
 
-    n1.setValue(-1);
-    int32_t num = 0;
-    #ifndef USE_NON_BLOCKING
-        if(!n1.getValue(&num))
-        {
-            Serial.print("Signed get failed!    ");
-        }
-        Serial.print("Got Signed Number: ");
-        Serial.println(num);
-    #else  
-    #endif
-
+    // un attached functions: passes "field" param directly through
+    next->getStr("connect", string_callback, genFailure_callback, false);
+    next->setNum("bkcmd", 3, genSuccess_callback, genFailure_callback);
 }
 
 void loop()
 {
     next->nexLoop(nex_listen_list);
-    // Serial.println("in loop");
 
     // check setters and timing
     checkSetters();
+}
+
+void genSuccess_callback(NexObject *obj)
+{
+    digitalWrite(callback_busy_pin1, HIGH);
+    #ifdef PRINT_NB_SUCCESS
+        if (nullptr == obj)
+        {
+            Serial.print("Generic");
+        }
+        else // we have a calling obj!
+        {
+            String name;
+            obj->getObjInfo(name);
+            Serial.print(name);
+        }
+
+        Serial.print(" command succeeded!");
+        Serial.println();
+    #endif /* PRINT_NB_SUCCESS */
+    delayMicroseconds(10);
+    digitalWrite(callback_busy_pin1, LOW);
+}
+
+void genFailure_callback(uint8_t returnCode, NexObject *obj)
+{
+    digitalWrite(callback_busy_pin1, HIGH);
+    if (nullptr == obj)
+    {
+        Serial.print("Generic");
+    } else if (&x0 == obj) {
+        Serial.print("Unsigned Number set");
+    } else if (&x1 == obj) {
+        Serial.print("Signed Number set");
+    } else if (&t0 == obj) {
+        Serial.print("String set");
+    } else if (&n0 == obj) {
+        Serial.print("Unsigned Number get");
+    } else if (&n1 == obj) {
+        Serial.print("Signed Number get");
+    } else if (&t1 == obj) {
+        Serial.print("String get");
+    }
+
+    Serial.print(" command failed with return code: ");
+    Serial.print(returnCode, HEX);
+    Serial.println();
+    digitalWrite(callback_busy_pin1, LOW);
 }
 
 void basicBtn_callback(void *ptr)
@@ -236,9 +281,11 @@ void checkSetters(void)
         #ifndef USE_NON_BLOCKING
             if(!x0.setValue(millis()/100))
             {
-                Serial.println("unsigned Num failed!");
+                genFailure_callback(0,&x0);
             }
         #else  
+            x0.setNum("val",millis()/100,
+                      genSuccess_callback,genFailure_callback);
         #endif
         digitalWrite(setter_busy_pin1, LOW);
     }
@@ -250,9 +297,11 @@ void checkSetters(void)
         #ifndef USE_NON_BLOCKING
             if(!x1.setValue( (int32_t) -millis()/100))
             {
-                Serial.println("signed Num failed!");
+                genFailure_callback(0,&x1);
             }
         #else  
+            x1.setNum("val", (int32_t) - millis() /100,
+                      genSuccess_callback, genFailure_callback);
         #endif
         digitalWrite(setter_busy_pin1, LOW);
     }
@@ -265,9 +314,10 @@ void checkSetters(void)
         #ifndef USE_NON_BLOCKING
             if(!t0.setText(buf))
             {
-                Serial.println("string set failed");
+                genFailure_callback(0,&t0);
             }
         #else  
+            t0.setStr("txt",buf,genSuccess_callback,genFailure_callback);
         #endif
         digitalWrite(setter_busy_pin1, LOW);
     }
@@ -296,30 +346,30 @@ void reqGetter_callback(void* ptr)
     else if (&n0 == ptr)
     {
         digitalWrite(getter_busy_pin1, HIGH);
-        uint32_t num = 0;
         #ifndef USE_NON_BLOCKING
+            uint32_t num = 0;
             if(!n0.Get_background_color_bco(&num))
             {
-                Serial.print("unsigned num get failed!    ");
+                genFailure_callback(0,&n0);
             }
-            Serial.print("Got Unsigned Number: ");
-            Serial.println(num);
+            number_callback((int32_t) num, &n0);
         #else  
+            n0.getNum("bco", number_callback, genFailure_callback);
         #endif
         digitalWrite(getter_busy_pin1, LOW);
     }
     else if (&n1 == ptr)
     {
         digitalWrite(getter_busy_pin1, HIGH);
-        int32_t num = 0;
         #ifndef USE_NON_BLOCKING
+            int32_t num = 0;
             if(!n1.getValue(&num))
             {
-                Serial.print("Signed get failed!    ");
+                genFailure_callback(0,&n1);
             }
-            Serial.print("Got Signed Number: ");
-            Serial.println(num);
+            number_callback(num, &n1);
         #else  
+            n1.getNum("val", number_callback, genFailure_callback);
         #endif
         digitalWrite(getter_busy_pin1, LOW);
     }
@@ -330,12 +380,39 @@ void reqGetter_callback(void* ptr)
         #ifndef USE_NON_BLOCKING
             if(!t1.getText(str))
             {
-                Serial.print("string get failed!    ");
+                genFailure_callback(0,&t1);
             }
-            Serial.print("Got String : ");
-            Serial.println(str);
+            string_callback(str, &t1);
         #else  
+            t1.getStr("txt", string_callback, genFailure_callback);
         #endif
         digitalWrite(getter_busy_pin1, LOW);
     }
+}
+
+void number_callback(int32_t num, NexObject *obj)
+{
+    digitalWrite(callback_busy_pin1, HIGH);
+    if(nullptr == obj){
+        Serial.println("unregistered number return!");
+    } else if (&n0 == obj) {
+        Serial.print("Got Unsigned Number: ");
+        Serial.println(num);
+    } else if (&n1 == obj) {
+        Serial.print("Got Unsigned Number: ");
+        Serial.println(num);
+    }
+    digitalWrite(callback_busy_pin1, LOW);
+}
+void string_callback(String str, NexObject *obj)
+{
+    digitalWrite(callback_busy_pin1, HIGH);
+    if(nullptr == obj) {
+        Serial.println("unregister String return: ");
+        Serial.println(str); // still print it!
+    } else if (&t1 == obj) {
+        Serial.print("Got String: ");
+        Serial.println(str);
+    }
+    digitalWrite(callback_busy_pin1, LOW);
 }
