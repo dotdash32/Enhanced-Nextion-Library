@@ -191,38 +191,15 @@ virtual uint32_t GetCurrentBaud() =0;
 virtual bool setStr(String field, String newText, successCallback succCB, failureCallback failCallback, NexObject *obj, uint32_t timeout) =0;
 
 /**
- * @brief Set a String parameter (char input)
- * 
- * @param field - which field/command section to write to
- * @param buf - new textual value, in const char form
- * @param succCB - success callback
- * @param obj - object that called the function
- * @param failCallback - failure callback
- * @param timeout - how long before assuming no connection
- * @return true - message sent successfully
- * @return false - queue collision!
- */
-virtual bool setStr(String field, char *buf, successCallback succCB, failureCallback failCallback, NexObject *obj, uint32_t timeout) =0;
-
-/**
- * @brief Set a Number parameter (unsigned)
- * 
- * @param field - which field/command section to write to
- * @param num 
- * @param succCB - success callback
- * @param obj - object that called the function
- * @param failCallback - failure callback
- * @param timeout - how long before assuming no connection
- * @return true - message sent successfully
- * @return false - queue collision!
- */
-virtual bool setNum(String field, uint32_t num, successCallback succCB, failureCallback failCallback, NexObject *obj, uint32_t timeout) =0;
-
-/**
  * @brief Set a Number parameter (signed)
  * 
+ * Basically all numbers in the Nextion are signed, or are limited to within
+ * the positive bounds of a int32_t.  If you REALLY need an unsigned number,
+ * make it a uint32_t and cast it to an int32_t before feeding it into this 
+ * function.
+ * 
  * @param field - which field/command section to write to
- * @param num 
+ * @param num - number to send
  * @param succCB - success callback
  * @param obj - object that called the function
  * @param failCallback - failure callback
@@ -243,7 +220,7 @@ virtual bool setNum(String field, int32_t num, successCallback succCB, failureCa
  * @return true - message sent successfully
  * @return false - queue collision!
  */
-virtual bool getStr(String field, stringCallback retCallback, failureCallback failCallback, NexObject *obj, uint32_t timeout) =0;
+virtual bool getStr(String field, stringCallback retCallback, failureCallback failCallback, bool start_flag, NexObject *obj, uint32_t timeout) =0;
 
 /**
  * @brief Get a Number value

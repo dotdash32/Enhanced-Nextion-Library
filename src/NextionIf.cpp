@@ -106,20 +106,6 @@ bool NextionIf::setStr(String field, String newText, successCallback succCB,
     return m_nextion->setStr(field, newText, succCB, failCallback, obj, timeout);
 }
 
-bool NextionIf::setStr(String field, char *buf, successCallback succCB,
-                       failureCallback failCallback, NexObject *obj, 
-                       uint32_t timeout)
-{
-    return m_nextion->setStr(field, buf, succCB, failCallback, obj, timeout);
-}
-
-bool NextionIf::setNum(String field, uint32_t num,  successCallback succCB,
-                       failureCallback failCallback, NexObject *obj, 
-                       uint32_t timeout)
-{
-    return m_nextion->setNum(field, num, succCB, failCallback, obj, timeout);
-}
-
 bool NextionIf::setNum(String field, int32_t num,  successCallback succCB,
                        failureCallback failCallback, NexObject *obj, 
                        uint32_t timeout)
@@ -128,10 +114,10 @@ bool NextionIf::setNum(String field, int32_t num,  successCallback succCB,
 }
 
 bool NextionIf::getStr(String field, stringCallback retCallback,
-                       failureCallback failCallback, NexObject *obj, 
-                       uint32_t timeout)
+                       failureCallback failCallback, bool start_flag, 
+                       NexObject *obj, uint32_t timeout)
 {
-    return m_nextion->getStr(field, retCallback, failCallback, obj, timeout);
+    return m_nextion->getStr(field, retCallback, failCallback, start_flag, obj, timeout);
 }
 bool NextionIf::getNum(String field, numberCallback retCallback, 
                        failureCallback failCallback, NexObject *obj, 

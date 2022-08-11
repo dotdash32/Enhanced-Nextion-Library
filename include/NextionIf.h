@@ -169,13 +169,9 @@ uint32_t GetCurrentBaud() final;
 
 virtual bool setStr(String field, String newText, successCallback succCB = nullptr, failureCallback failCallback = nullptr, NexObject *obj = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
 
-virtual bool setStr(String field, char *buf, successCallback succCB = nullptr, failureCallback failCallback = nullptr, NexObject *obj = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
-
-virtual bool setNum(String field, uint32_t num, successCallback succCB = nullptr, failureCallback failCallback = nullptr, NexObject *obj = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
-
 virtual bool setNum(String field, int32_t num, successCallback succCB = nullptr, failureCallback failCallback = nullptr, NexObject *obj = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
 
-virtual bool getStr(String field, stringCallback retCallback, failureCallback failCallback = nullptr, NexObject *obj = nullptr, uint32_t timeout = NEX_TIMEOUT_RETURN);
+virtual bool getStr(String field, stringCallback retCallback, failureCallback failCallback = nullptr, bool start_flag = true, NexObject *obj = nullptr, uint32_t timeout = NEX_TIMEOUT_RETURN);
 virtual bool getNum(String field, numberCallback retCallback, failureCallback failCallback = nullptr, NexObject *obj = nullptr, uint32_t timeout = NEX_TIMEOUT_RETURN);
 bool nbSendCmd(String command, uint8_t returnCode, successCallback succCB = nullptr, failureCallback failCallback = nullptr, NexObject *obj = nullptr, uint32_t timeout = NEX_TIMEOUT_COMMAND);
 

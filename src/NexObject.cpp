@@ -158,22 +158,6 @@ bool NexObject::setStr(String field, String newText, successCallback succCB,
     return NextionIf::setStr(field, newText, succCB, failCallback, this, timeout);
 }
 
-bool NexObject::setStr(String field, char *buf, successCallback succCB,
-                       failureCallback failCallback, NexObject *obj, 
-                       uint32_t timeout)
-{
-    prePendPageName(field);
-    return NextionIf::setStr(field, buf, succCB, failCallback, this, timeout);
-}
-
-bool NexObject::setNum(String field, uint32_t num,  successCallback succCB,
-                       failureCallback failCallback, NexObject *obj, 
-                       uint32_t timeout)
-{
-    prePendPageName(field);
-    return NextionIf::setNum(field, num, succCB, failCallback, this, timeout);
-}
-
 bool NexObject::setNum(String field, int32_t num,  successCallback succCB,
                        failureCallback failCallback, NexObject *obj,
                        uint32_t timeout)
@@ -183,16 +167,20 @@ bool NexObject::setNum(String field, int32_t num,  successCallback succCB,
 }
 
 bool NexObject::getStr(String field, stringCallback retCallback,
-                       failureCallback failCallback, NexObject *obj, 
-                       uint32_t timeout)
+                       failureCallback failCallback, bool start_flag,
+                       NexObject *obj, uint32_t timeout)
 {
     prePendPageName(field);
-    return NextionIf::getStr(field, retCallback, failCallback, this, timeout);
+    String cmd = String("get ");
+    cmd += field; // need to prepend the get command
+    return NextionIf::getStr(cmd, retCallback, failCallback, start_flag, this, timeout);
 }
 bool NexObject::getNum(String field, numberCallback retCallback, 
                        failureCallback failCallback, NexObject *obj, 
                        uint32_t timeout)
 {
     prePendPageName(field);
-    return NextionIf::getNum(field, retCallback, failCallback, this, timeout);
+    String cmd = String("get ");
+    cmd += field; // need to prepend the get command
+    return NextionIf::getNum(cmd, retCallback, failCallback, this, timeout);
 }
