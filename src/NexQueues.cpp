@@ -1,15 +1,15 @@
 /**
  * @file NexQueues.cpp
- * 
+ *
  * Implementation of different queues for NexHardware internals
- * 
+ *
  * @author Josh deWitt (https://github.com/dotdash32)
  * @brief Ring Buffer queues for sent events and responses
  * @version 0.1
  * @date 2022-08-04
- * 
+ *
  * @copyright Copyright (c) 2022
- * 
+ *
  */
 
 #include "NexQueues.h"
@@ -45,9 +45,9 @@ bool NexEventQueue::enqueue(nexQueuedCommand event, size_t* saveSpot)
         Serial.print(Qwrite);
         Serial.println();
     #endif
-    
+
     // if tail is ahead of head, overflowed
-    return ((Qwrite+1 %CMD_QUEUE_SIZE) != (Qread %CMD_QUEUE_SIZE)); 
+    return ((Qwrite+1 %CMD_QUEUE_SIZE) != (Qread %CMD_QUEUE_SIZE));
 }
 
 // same as above, but a pointer for efficiancy??
@@ -61,9 +61,9 @@ bool NexEventQueue::enqueuePtr(nexQueuedCommand *event, size_t *saveSpot)
         *saveSpot = Qwrite; // were we did the insertion
     }
     Qwrite++; // don't wrap!
-    
+
     // if tail is ahead of head, overflowed
-    return ((Qwrite+1 %CMD_QUEUE_SIZE) != (Qread %CMD_QUEUE_SIZE)); 
+    return ((Qwrite+1 %CMD_QUEUE_SIZE) != (Qread %CMD_QUEUE_SIZE));
 }
 
 nexQueuedCommand NexEventQueue::dequeue(void)

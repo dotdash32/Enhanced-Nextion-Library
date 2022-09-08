@@ -1,23 +1,23 @@
 /**
  * @file NexHardware.cpp
  *
- * The implementation of base API for using Nextion. 
+ * The implementation of base API for using Nextion.
  *
  * @author  Wu Pengfei (email:<pengfei.wu@itead.cc>)
  * @date    2015/8/11
  * @author Jyrki Berg 2/17/2019 (https://github.com/jyberg)
- * 
- * @copyright 
+ *
+ * @copyright
  * Copyright (C) 2014-2015 ITEAD Intelligent Systems Co., Ltd. \n
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
  * published by the Free Software Foundation; either version 2 of
  * the License, or (at your option) any later version.
- * 
+ *
  * @copyright 2020 Jyrki Berg
- * 
+ *
  * @author Josh DeWitt 7/28/2022 (https://github.com/dotdash32)
- * 
+ *
  **/
 
 
@@ -71,7 +71,7 @@ const uint32_t Nextion::baudRates[]{2400, 4800, 9600, 19200, 31250, 38400, 57600
 // buffer things
 static byte RX_buffer[RX_BUFFER_SIZE] = {0}; // array to store incoming values in
 static size_t RX_ind = 0; // where in the buffer array are we?
-static size_t RX_ind_old = 0; // save for parsing 
+static size_t RX_ind_old = 0; // save for parsing
 static uint8_t endTransCnt = 0; // how many end of message bytes have we rec'd?
 
 // create queue objects
@@ -79,9 +79,9 @@ static NexEventQueue cmdQ = NexEventQueue();
 static NexResponseQueue respQ = NexResponseQueue();
 
 /**
- * 
+ *
  * @brief Take in serial data and store it into buffer for processing
- * 
+ *
  * @return whether or not there is data to parse afterward
  */
 bool Nextion::readSerialData(void)
@@ -90,12 +90,12 @@ bool Nextion::readSerialData(void)
     while(m_nexSerial->available())
     {
         //while there is data available, put it into a read buffer
-        byte newData = m_nexSerial->read(); 
+        byte newData = m_nexSerial->read();
         #ifdef LOW_LEVEL_DEBUG
             Serial.print(newData,HEX);
             Serial.print(" ");
         #endif /* LOW_LEVEL_DEBUG*/
-        
+
         RX_buffer[RX_ind++] = newData;
         if (NEX_END_TRANSMISSION_VALUE == newData && RX_ind == 1)
         {
@@ -130,7 +130,7 @@ bool Nextion::readSerialData(void)
                         Serial.print  ("        length: "); Serial.print(RX_ind);
                         Serial.println();
                     #endif /* LOW_LEVEL_DEBUG*/
-                
+
                     // we have the full transmission ender
                     returnVal = true; // get ready to parse afterward
                     endTransCnt = 0; // reset message
@@ -146,7 +146,7 @@ bool Nextion::readSerialData(void)
                 endTransCnt = 0;
             }
         }
-        else 
+        else
         {
             // not a real terminator, reset count
             endTransCnt = 0;
@@ -157,7 +157,7 @@ bool Nextion::readSerialData(void)
 
 /**
  * @brief Process the recieved message and handle any new events
- * 
+ *
  */
 void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
 {
@@ -293,7 +293,7 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
                     // correct return code, now return the number through callback
                     if (event.numCB != nullptr)
                     {
-                        int32_t number = ((uint32_t)RX_buffer[4] << 24) | ((uint32_t)RX_buffer[3] << 16) | 
+                        int32_t number = ((uint32_t)RX_buffer[4] << 24) | ((uint32_t)RX_buffer[3] << 16) |
                                         ((uint32_t)RX_buffer[2] << 8) | (RX_buffer[1]);
                         event.numCB(number, event.calling_object);
                     }
@@ -309,12 +309,12 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
             {
                 if(RX_buffer[0] == NEX_RET_EVENT_POSITION_HEAD && touchCoordinateCallback!=nullptr)
                 {
-                        
+
                     touchCoordinateCallback(((int16_t)RX_buffer[2] << 8) | (RX_buffer[1]), ((int16_t)RX_buffer[4] << 8) | (RX_buffer[3]),RX_buffer[5]);
                 }
                 else if(RX_buffer[0] == NEX_RET_EVENT_SLEEP_POSITION_HEAD && touchCoordinateCallback!=nullptr)
                 {
-                        
+
                     touchEventInSleepModeCallback(((int16_t)RX_buffer[2] << 8) | (RX_buffer[1]), ((int16_t)RX_buffer[4] << 8) | (RX_buffer[3]),RX_buffer[5]);
                 }
             }
@@ -401,9 +401,9 @@ void Nextion::parseReceivedMessage(NexTouch *nex_listen_list[])
             dbSerialPrint(RX_buffer[0]);
             dbSerialPrintln();
 
-            break;              
+            break;
         }
-    }; 
+    };
 }
 
 
@@ -511,7 +511,7 @@ bool Nextion::findBaud(uint32_t &baud)
         {
             ((SoftwareSerial*)m_nexSerial)->begin(baudRates[i]);
         }
-#endif 
+#endif
 #ifdef USBCON
         if (m_nexSerialType==HW_USBCON)
         {
@@ -527,7 +527,7 @@ bool Nextion::findBaud(uint32_t &baud)
             return true;
         }
     }
-    return false; 
+    return false;
 }
 
 bool Nextion::prepRetNumber(numberCallback retCallback, failureCallback failCallback,
@@ -635,16 +635,16 @@ bool Nextion::prepRetCodeBlocking(nexResponses *&respSlot, size_t *saveSpot,
 }
 
 /*
- * Receive unt32_t data. 
- * 
- * @param number - save uint32_t data. 
- * @param timeout - set timeout time. 
+ * Receive unt32_t data.
  *
- * @retval true - success. 
+ * @param number - save uint32_t data.
+ * @param timeout - set timeout time.
+ *
+ * @retval true - success.
  * @retval false - failed.
- * 
+ *
  * blocking code!! for backwards compatibility
- * 
+ *
  * One caveat: if an event callback triggers another blocking wait,
  * the first blocking wait will fail (wrong data in buffer)
  *
@@ -694,7 +694,7 @@ bool Nextion::recvRetNumber(uint32_t *number, size_t timeout)
             ret = false;
         }
 
-        if (ret) 
+        if (ret)
         {
             dbSerialPrint("recvRetNumber: ");
             dbSerialPrintln(*number);
@@ -703,18 +703,18 @@ bool Nextion::recvRetNumber(uint32_t *number, size_t timeout)
         {
             dbSerialPrintln("recvRetNumber err");
         }
-        
+
     }
     return ret;
 }
 
 /*
- * Receive int32_t data. 
- * 
- * @param number - save int32_t data. 
- * @param timeout - set timeout time. 
+ * Receive int32_t data.
  *
- * @retval true - success. 
+ * @param number - save int32_t data.
+ * @param timeout - set timeout time.
+ *
+ * @retval true - success.
  * @retval false - failed.
  *
  */
@@ -726,13 +726,13 @@ bool Nextion::recvRetNumber(int32_t *number, size_t timeout)
 }
 
 /*
- * Receive string data. 
- * 
- * @param str - save string data. 
- * @param timeout - set timeout time. 
+ * Receive string data.
+ *
+ * @param str - save string data.
+ * @param timeout - set timeout time.
  * @param start_flag - is str start flag (0x70) expected, default falue true
  *
- * @retval true - success. 
+ * @retval true - success.
  * @retval false - failed.
  *
  */
@@ -751,14 +751,14 @@ bool Nextion::recvRetString(String &str, size_t timeout, bool start_flag)
         // just sit here and loop
         nexLoop();
         yield();
-    } 
+    }
 
     // when we break, our event should be the last one processed
     if(nullptr != respSlot)
     {
         if ((NEX_RET_STRING_HEAD == respSlot->RX_buf[0] || !start_flag) &&
             (respSlot->RX_ind > 4))
-        {   
+        {
             uint16_t index = 0; // assume there is no offset
             if (start_flag)
             {
@@ -792,16 +792,16 @@ bool Nextion::recvRetString(String &str, size_t timeout, bool start_flag)
 }
 
 /*
- * Receive string data. 
- * 
- * @param buffer - save string data. 
- * @param len - in buffer len / out saved string len excluding null char. 
- * @param timeout - set timeout time. 
+ * Receive string data.
+ *
+ * @param buffer - save string data.
+ * @param len - in buffer len / out saved string len excluding null char.
+ * @param timeout - set timeout time.
  * @param start_flag - is str start flag (0x70) expected, default falue true
  *
  *
- * @retval true - success. 
- * @retval false - failed.  
+ * @retval true - success.
+ * @retval false - failed.
  *
  */
 bool Nextion::recvRetString(char *buffer, uint16_t &len, size_t timeout, bool start_flag)
@@ -885,7 +885,7 @@ bool Nextion::recvCommand(const uint8_t command, size_t timeout)
         ret = false;
     }
 
-    if (ret) 
+    if (ret)
     {
         dbSerialPrint("recv command: ");
         dbSerialPrintln(command);
@@ -894,14 +894,14 @@ bool Nextion::recvCommand(const uint8_t command, size_t timeout)
     {
         dbSerialPrintln("recv command err");
     }
-        
+
     return ret;
 }
 
 bool Nextion::recvRetCommandFinished(size_t timeout)
 {
     bool ret = recvCommand(NEX_RET_CMD_FINISHED_OK, timeout);
-    if (ret) 
+    if (ret)
     {
         dbSerialPrintln("recvRetCommandFinished ok");
     }
@@ -916,7 +916,7 @@ bool Nextion::RecvTransparendDataModeReady(size_t timeout)
 {
     dbSerialPrintln("RecvTransparendDataModeReady requested");
     bool ret = recvCommand(Nex_RET_TRANSPARENT_DATA_READY, timeout);
-    if (ret) 
+    if (ret)
     {
         dbSerialPrintln("RecvTransparendDataModeReady ok");
     }
@@ -930,7 +930,7 @@ bool Nextion::RecvTransparendDataModeReady(size_t timeout)
 bool Nextion::RecvTransparendDataModeFinished(size_t timeout)
 {
     bool ret = recvCommand(Nex_RET_TRANSPARENT_DATA_FINISHED, timeout);
-    if (ret) 
+    if (ret)
     {
         dbSerialPrintln("RecvTransparendDataModeFinished ok");
     }
@@ -972,7 +972,7 @@ bool Nextion::nexInit(const uint32_t baud)
             m_baud=baud;
         }
     }
-#ifdef NEX_ENABLE_SW_SERIAL   
+#ifdef NEX_ENABLE_SW_SERIAL
     if (m_nexSerialType==SW)
     {
         // try to connect first with default baud as daspaly may have forgot set baud
@@ -999,7 +999,7 @@ bool Nextion::nexInit(const uint32_t baud)
             }
             m_baud=baud;
         }
-    } 
+    }
 #endif
     dbSerialPrint("Used Nextion baud: ");
     dbSerialPrintln(m_baud);
@@ -1027,7 +1027,7 @@ void Nextion::nexLoop(NexTouch *nex_listen_list[])
 }
 
 bool Nextion::setStr(String field, String newText, successCallback succCB,
-                     failureCallback failCallback, NexObject *obj, 
+                     failureCallback failCallback, NexObject *obj,
                      uint32_t timeout)
 {
     String cmd = field;
@@ -1035,12 +1035,12 @@ bool Nextion::setStr(String field, String newText, successCallback succCB,
     cmd += newText; // format command
     cmd += "\""; // add quotes around the value!
     sendCommand(cmd.c_str());
-    return prepRetCode(NEX_RET_CMD_FINISHED_OK, succCB, failCallback, 
+    return prepRetCode(NEX_RET_CMD_FINISHED_OK, succCB, failCallback,
                        obj, timeout);
 }
 
 bool Nextion::setNum(String field, int32_t num, successCallback succCB,
-                     failureCallback failCallback, NexObject *obj, 
+                     failureCallback failCallback, NexObject *obj,
                      uint32_t timeout)
 {
     String cmd = field;
@@ -1063,20 +1063,20 @@ bool Nextion::getStr(String field, stringCallback retCallback,
                      NexObject *obj, uint32_t timeout)
 {
     sendCommand(field.c_str());
-    return prepRetString(retCallback, failCallback, obj, 
+    return prepRetString(retCallback, failCallback, obj,
                                     start_flag, timeout);
 }
-bool Nextion::getNum(String field, numberCallback retCallback, 
-                     failureCallback failCallback, NexObject *obj, 
+bool Nextion::getNum(String field, numberCallback retCallback,
+                     failureCallback failCallback, NexObject *obj,
                      uint32_t timeout)
 {
     sendCommand(field.c_str());
-    return prepRetNumber(retCallback, failCallback, obj, 
+    return prepRetNumber(retCallback, failCallback, obj,
                                     timeout);
 }
-bool Nextion::nbSendCmd(String command, uint8_t returnCode, 
-                        successCallback succCB, 
-                        failureCallback failCallback, 
+bool Nextion::nbSendCmd(String command, uint8_t returnCode,
+                        successCallback succCB,
+                        failureCallback failCallback,
                         NexObject *obj, uint32_t timeout)
 {
     sendCommand(command.c_str());
