@@ -100,12 +100,12 @@
 //#define NEX_ENABLE_TFT_UPLOAD
 
 // Enable HardwareSerial support by definign NEX_ENABLE_HW_SERIAL
-#define NEX_ENABLE_HW_SERIAL
+// #define NEX_ENABLE_HW_SERIAL
 
 // Enable SoftwareSerial support by definign NEX_ENABLE_SW_SERIAL
 // NodeMcu / Esp8266 use Softwareserial if usb port is used for debuging
 // NodeMcu board pin numbers not match with Esp8266 pin numbers use NodeMcu Pin number definitions (pins_arduino.h)
-#define NEX_ENABLE_SW_SERIAL
+// #define NEX_ENABLE_SW_SERIAL
 
 
 #ifdef DEBUG_SERIAL_ENABLE
