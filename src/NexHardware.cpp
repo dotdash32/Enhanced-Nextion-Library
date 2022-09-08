@@ -69,7 +69,7 @@
 const uint32_t Nextion::baudRates[]{2400, 4800, 9600, 19200, 31250, 38400, 57600, 115200, 230400, 250000, 256000, 512000, 921600};
 
 // buffer things
-static byte RX_buffer[RX_BUFFER_SIZE] = {0}; // array to store incoming values in
+static byte RX_buffer[NEX_RX_BUFFER_SIZE] = {0}; // array to store incoming values in
 static size_t RX_ind = 0; // where in the buffer array are we?
 static size_t RX_ind_old = 0; // save for parsing
 static uint8_t endTransCnt = 0; // how many end of message bytes have we rec'd?

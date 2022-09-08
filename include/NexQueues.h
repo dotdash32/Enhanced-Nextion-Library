@@ -21,7 +21,7 @@
 // struct to store stored responses
 struct nexResponses
 {
-    uint8_t RX_buf[RX_2ND_BUF_SIZE] = {0};
+    uint8_t RX_buf[NEX_RESP_BUF_SIZE] = {0};
     size_t  RX_ind = 0;
 };
 
@@ -105,7 +105,7 @@ bool clearExpiredCommands(void);
 /***************************************/
 private:
 
-    nexQueuedCommand eventQ[CMD_QUEUE_SIZE];
+    nexQueuedCommand eventQ[NEX_CMD_QUEUE_SIZE];
     size_t Qread, Qwrite = {0};
 };
 
@@ -138,7 +138,7 @@ bool storeData(nexQueuedCommand *event, size_t RX_ind, byte *RX_buffer);
 nexResponses* getResponseSlot(void);
 /*******************************************/
 private:
-    nexResponses respQ[RX_2ND_ARR_SIZE]; // array of responses
+    nexResponses respQ[NEX_RESP_ARR_SIZE]; // array of responses
     size_t Qwrite = 0; // where can we stick the next value?
 
 

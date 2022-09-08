@@ -28,7 +28,7 @@ NexEventQueue::NexEventQueue()
 /** handle internal command queue **/
 bool NexEventQueue::enqueue(nexQueuedCommand event, size_t* saveSpot)
 {
-    eventQ[Qwrite % CMD_QUEUE_SIZE] = event;
+    eventQ[Qwrite % NEX_CMD_QUEUE_SIZE] = event;
     if(nullptr != saveSpot)
     {
         *saveSpot = Qwrite; // were we did the insertion
@@ -47,7 +47,7 @@ bool NexEventQueue::enqueue(nexQueuedCommand event, size_t* saveSpot)
     #endif
 
     // if tail is ahead of head, overflowed
-    return ((Qwrite+1 %CMD_QUEUE_SIZE) != (Qread %CMD_QUEUE_SIZE));
+    return ((Qwrite+1 % NEX_CMD_QUEUE_SIZE) != (Qread % NEX_CMD_QUEUE_SIZE));
 }
 
 // same as above, but a pointer for efficiancy??
@@ -55,7 +55,7 @@ bool NexEventQueue::enqueue(nexQueuedCommand event, size_t* saveSpot)
 // it fills the internal queue directly, via the pointer
 bool NexEventQueue::enqueuePtr(nexQueuedCommand *event, size_t *saveSpot)
 {
-    event = &eventQ[Qwrite % CMD_QUEUE_SIZE]; // export pointer to use
+    event = &eventQ[Qwrite % NEX_CMD_QUEUE_SIZE]; // export pointer to use
     if(nullptr != saveSpot)
     {
         *saveSpot = Qwrite; // were we did the insertion
@@ -63,18 +63,18 @@ bool NexEventQueue::enqueuePtr(nexQueuedCommand *event, size_t *saveSpot)
     Qwrite++; // don't wrap!
 
     // if tail is ahead of head, overflowed
-    return ((Qwrite+1 %CMD_QUEUE_SIZE) != (Qread %CMD_QUEUE_SIZE));
+    return ((Qwrite+1 % NEX_CMD_QUEUE_SIZE) != (Qread % NEX_CMD_QUEUE_SIZE));
 }
 
 nexQueuedCommand NexEventQueue::dequeue(void)
 {
-    nexQueuedCommand temp = eventQ[Qread % CMD_QUEUE_SIZE]; // pull from front
+    nexQueuedCommand temp = eventQ[Qread % NEX_CMD_QUEUE_SIZE]; // pull from front
     Qread++;
     return temp;
 }
 nexQueuedCommand* NexEventQueue::dequeuePtr(void)
 {
-    nexQueuedCommand *temp = &eventQ[Qread % CMD_QUEUE_SIZE]; // pull from front
+    nexQueuedCommand *temp = &eventQ[Qread % NEX_CMD_QUEUE_SIZE]; // pull from front
     Qread++;
     return temp;
 }
@@ -93,7 +93,7 @@ bool NexEventQueue::passedIndex(size_t *saveSpot)
         // two cases, no wrap and wrap
 
         // check wrap first
-        if (Qwrite < CMD_QUEUE_SIZE && Qread > CMD_QUEUE_SIZE)
+        if (Qwrite < NEX_CMD_QUEUE_SIZE && Qread > NEX_CMD_QUEUE_SIZE)
         {
             #ifdef Q_SAVE_SLOT_DEBUG
                 Serial.print("save index: ");
@@ -107,7 +107,7 @@ bool NexEventQueue::passedIndex(size_t *saveSpot)
                 Serial.println("wrapping index"); // yet to get here lol
             #endif
             // write index just rolled over, but read has not
-            returnVal = ((Qread % CMD_QUEUE_SIZE) > (*saveSpot % CMD_QUEUE_SIZE));
+            returnVal = ((Qread % NEX_CMD_QUEUE_SIZE) > (*saveSpot % NEX_CMD_QUEUE_SIZE));
         }
         //no wrap
         if (Qread > *saveSpot)
@@ -130,11 +130,11 @@ bool NexEventQueue::passedIndex(size_t *saveSpot)
 
 nexQueuedCommand NexEventQueue::peek(void)
 {
-    return eventQ[Qread % CMD_QUEUE_SIZE]; // look, but don't remove
+    return eventQ[Qread % NEX_CMD_QUEUE_SIZE]; // look, but don't remove
 }
 nexQueuedCommand* NexEventQueue::peekPtr(void)
 {
-    return &eventQ[Qread % CMD_QUEUE_SIZE];
+    return &eventQ[Qread % NEX_CMD_QUEUE_SIZE];
 }
 
 bool NexEventQueue::clearExpiredCommands(void)
@@ -190,7 +190,7 @@ bool NexResponseQueue::storeData(nexQueuedCommand *event, size_t RX_ind, byte *R
 
 nexResponses* NexResponseQueue::getResponseSlot(void)
 {
-    nexResponses *temp = &respQ[Qwrite % RX_2ND_ARR_SIZE];
+    nexResponses *temp = &respQ[Qwrite % NEX_RESP_ARR_SIZE];
     Qwrite++;
     return temp; // pass it out
 }
