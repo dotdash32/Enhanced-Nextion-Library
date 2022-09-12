@@ -1030,11 +1030,10 @@ bool Nextion::setStr(String field, String newText, successCallback succCB,
                      failureCallback failCallback, NexObject *obj,
                      uint32_t timeout)
 {
-    String cmd = field;
-    cmd += "=\"";
-    cmd += newText; // format command
-    cmd += "\""; // add quotes around the value!
-    sendCommand(cmd.c_str());
+    field += "=\"";
+    field += newText; // format command
+    field += "\""; // add quotes around the value!
+    sendCommand(field.c_str());
     return prepRetCode(NEX_RET_CMD_FINISHED_OK, succCB, failCallback,
                        obj, timeout);
 }
@@ -1043,17 +1042,16 @@ bool Nextion::setNum(String field, int32_t num, successCallback succCB,
                      failureCallback failCallback, NexObject *obj,
                      uint32_t timeout)
 {
-    String cmd = field;
-    cmd += "=0x";
+    field += "=0x";
     char buf[9] = {0}; // create a teeny buffer
     itoa(num, buf, HEX);
     if ((strlen(buf) % 2) != 0)
     {
         // not byte aligned!  add a leading zero
-        cmd += "0";
+        field += "0";
     }
-    cmd += buf;
-    sendCommand(cmd.c_str());
+    field += buf;
+    sendCommand(field.c_str());
     return prepRetCode(NEX_RET_CMD_FINISHED_OK, succCB, failCallback,
                        obj, timeout);
 }

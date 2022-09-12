@@ -1,19 +1,19 @@
 /**
  * @file NexObject.cpp
  *
- * The implementation of class NexObject. 
+ * The implementation of class NexObject.
  *
  * @author  Wu Pengfei (email:<pengfei.wu@itead.cc>)
  * @date    2015/8/13
  * @author Jyrki Berg 2/17/2019 (https://github.com/jyberg)
- * 
- * @copyright 
+ *
+ * @copyright
  * Copyright (C) 2014-2015 ITEAD Intelligent Systems Co., Ltd. \n
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
  * published by the Free Software Foundation; either version 2 of
  * the License, or (at your option) any later version.
- * 
+ *
  * @copyright 2020 Jyrki Berg
  **/
 #include "NexObject.h"
@@ -57,7 +57,7 @@ void NexObject::getObjGlobalPageName(String &gName)
             gName += _page->getObjName();
             gName += ".";
         }
-        gName +=_name;
+        gName += _name;
     #else // use array indices
         gName += "p[";
         gName += _pid;
@@ -104,7 +104,7 @@ void NexObject::printObjInfo(void)
     else
     {
         dbSerialPrint("(null).");
-    }    
+    }
     if(_name)
     {
         dbSerialPrint(_name);
@@ -179,7 +179,7 @@ void NexObject::prePendPageName(String &field)
 }
 
 bool NexObject::setStr(String field, String newText, successCallback succCB,
-                       failureCallback failCallback, NexObject *obj, 
+                       failureCallback failCallback, NexObject *obj,
                        uint32_t timeout)
 {
     prePendPageName(field);
@@ -203,8 +203,8 @@ bool NexObject::getStr(String field, stringCallback retCallback,
     cmd += field; // need to prepend the get command
     return NextionIf::getStr(cmd, retCallback, failCallback, start_flag, this, timeout);
 }
-bool NexObject::getNum(String field, numberCallback retCallback, 
-                       failureCallback failCallback, NexObject *obj, 
+bool NexObject::getNum(String field, numberCallback retCallback,
+                       failureCallback failCallback, NexObject *obj,
                        uint32_t timeout)
 {
     prePendPageName(field);
